@@ -28,7 +28,8 @@ impl Preferences {
             "do_not_disturb": self.do_not_disturb,
             "autoplay": self.autoplay,
             "private_receipts": self.private_receipts,
-            "notifications": self.notifications.word(),
+            "direct_messages": self.direct_messages.word(),
+            "groups": self.groups.word(),
             "message_sound": self.message_sound,
             "notification_text": self.notification_text,
         })
@@ -73,6 +74,7 @@ fn upgrade(fields: &mut Fields) {
 
 fn read_fields(fields: &Fields) -> Preferences {
     let defaults = Preferences::default();
+    let former = choice(fields, "notifications", defaults.direct_messages);
     Preferences {
         theme: choice(fields, "theme", defaults.theme),
         density: choice(fields, "density", defaults.density),
@@ -87,7 +89,8 @@ fn read_fields(fields: &Fields) -> Preferences {
         do_not_disturb: flag(fields, "do_not_disturb", defaults.do_not_disturb),
         autoplay: fields.get("autoplay").and_then(Value::as_bool),
         private_receipts: flag(fields, "private_receipts", defaults.private_receipts),
-        notifications: choice(fields, "notifications", defaults.notifications),
+        direct_messages: level(fields, "direct_messages", former),
+        groups: level(fields, "groups", former),
         message_sound: flag(fields, "message_sound", defaults.message_sound),
         notification_text: flag(fields, "notification_text", defaults.notification_text),
     }
@@ -112,4 +115,17 @@ fn language(fields: &Fields) -> Language {
         .and_then(Value::as_str)
         .and_then(supported)
         .map_or(Language::System, Language::Code)
+}
+
+/// An own key that is there decides, valid or not; one that is missing follows the former key.
+fn level(
+    fields: &Fields,
+    key: &str,
+    former: super::GlobalNotificationLevel,
+) -> super::GlobalNotificationLevel {
+    if fields.contains_key(key) {
+        choice(fields, key, Preferences::default().direct_messages)
+    } else {
+        former
+    }
 }

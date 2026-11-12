@@ -42,7 +42,7 @@ fn busy() -> Preferences {
         language: Language::Code("fr"),
         text_size: TextSize::Large,
         high_contrast: Some(true),
-        notifications: GlobalNotificationLevel::Mentions,
+        direct_messages: GlobalNotificationLevel::Mentions,
         message_sound: false,
         ..Preferences::default()
     }

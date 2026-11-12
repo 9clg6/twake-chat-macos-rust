@@ -1,6 +1,6 @@
 //! What a room does with its notifications, from its own choice and the account default.
 
-use crate::preferences::GlobalNotificationLevel;
+use crate::preferences::{GlobalNotificationLevel, NotificationDefaults};
 
 /// What a room chooses for itself.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -26,19 +26,31 @@ pub enum NotificationLevel {
     None,
 }
 
-/// The level of a room: its own choice, or the account default.
+/// Direct room or group.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RoomKind {
+    /// A direct room.
+    Direct,
+    /// A group.
+    Group,
+}
+
+/// The level of a room: its own choice, or the account default of its kind.
 pub fn effective_level(
     room: RoomNotificationLevel,
-    global: GlobalNotificationLevel,
+    kind: RoomKind,
+    defaults: NotificationDefaults,
 ) -> NotificationLevel {
-    match (room, global) {
-        (RoomNotificationLevel::All, _) => NotificationLevel::All,
-        (RoomNotificationLevel::Mentions, _) => NotificationLevel::Mentions,
-        (RoomNotificationLevel::None, _) => NotificationLevel::None,
-        (RoomNotificationLevel::Default, GlobalNotificationLevel::All) => NotificationLevel::All,
-        (RoomNotificationLevel::Default, GlobalNotificationLevel::Mentions) => {
-            NotificationLevel::Mentions
-        }
+    let global = match (room, kind) {
+        (RoomNotificationLevel::All, _) => return NotificationLevel::All,
+        (RoomNotificationLevel::Mentions, _) => return NotificationLevel::Mentions,
+        (RoomNotificationLevel::None, _) => return NotificationLevel::None,
+        (RoomNotificationLevel::Default, RoomKind::Direct) => defaults.direct_messages,
+        (RoomNotificationLevel::Default, RoomKind::Group) => defaults.groups,
+    };
+    match global {
+        GlobalNotificationLevel::All => NotificationLevel::All,
+        GlobalNotificationLevel::Mentions => NotificationLevel::Mentions,
     }
 }
 
@@ -52,8 +64,8 @@ impl NotificationLevel {
         }
     }
 
-    /// The badge is grey for `Mentions` and `None` (D615).
+    /// Muted is nothing at all (D615).
     pub fn is_muted(self) -> bool {
-        self != Self::All
+        self == Self::None
     }
 }

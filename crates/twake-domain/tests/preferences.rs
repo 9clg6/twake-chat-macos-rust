@@ -40,7 +40,8 @@ fn the_switches_start_as_the_spec_says() {
     assert!(!p.do_not_disturb);
     assert_eq!(p.autoplay, None);
     assert!(!p.private_receipts);
-    assert_eq!(p.notifications, GlobalNotificationLevel::All);
+    assert_eq!(p.direct_messages, GlobalNotificationLevel::All);
+    assert_eq!(p.groups, GlobalNotificationLevel::All);
     assert!(p.message_sound);
     assert!(p.notification_text);
 }
@@ -215,6 +216,9 @@ fn the_view_carries_every_choice_of_the_user() {
             room_order: RoomOrder::Sections,
             bubble_align: BubbleAlign::Left,
             do_not_disturb: true,
+            appearance_locked: false,
+            language_locked: false,
+            common_settings_url: None,
         }
     );
 }
@@ -227,6 +231,7 @@ fn the_view_reads_the_os_where_the_user_chose_nothing() {
         reduced_motion: true,
         hour_24: true,
         language: "de-DE".into(),
+        common: None,
     };
     let v = prefs().view(&env);
     assert_eq!(v.scheme, ColorScheme::Dark);

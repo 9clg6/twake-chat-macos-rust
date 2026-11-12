@@ -129,8 +129,10 @@ pub struct Preferences {
     pub autoplay: Option<bool>,
     /// Read receipts are not sent (D55).
     pub private_receipts: bool,
-    /// Default level of the rooms.
-    pub notifications: GlobalNotificationLevel,
+    /// Default level of the direct rooms.
+    pub direct_messages: GlobalNotificationLevel,
+    /// Default level of the groups.
+    pub groups: GlobalNotificationLevel,
     /// A sound for a new message (D240).
     pub message_sound: bool,
     /// The text of the message shows in the notification.
@@ -153,7 +155,8 @@ impl Default for Preferences {
             do_not_disturb: false,
             autoplay: None,
             private_receipts: false,
-            notifications: GlobalNotificationLevel::All,
+            direct_messages: GlobalNotificationLevel::All,
+            groups: GlobalNotificationLevel::All,
             message_sound: true,
             notification_text: true,
         }
@@ -173,6 +176,104 @@ pub struct SystemEnv {
     pub hour_24: bool,
     /// Language of the OS as it gives it: `fr-FR`, `de_AT`, or empty.
     pub language: String,
+    /// Common settings of ToM (D38), `None` = none known.
+    pub common: Option<CommonSettings>,
+}
+
+/// The `user_info` of ToM, read only.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommonSettings {
+    /// `None`: the user chose nothing there.
+    pub theme: Option<CommonTheme>,
+    /// Language as ToM keeps it (`fr-FR`), `None` = none.
+    pub language: Option<String>,
+    /// Page where they change.
+    pub url: Option<String>,
+}
+
+/// The theme of the common settings.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommonTheme {
+    /// Light.
+    Light,
+    /// Dark.
+    Dark,
+    /// The theme of the system.
+    Auto,
+}
+
+/// What a poll of ToM gave.
+pub enum CommonFetch {
+    /// ToM answered.
+    Reached(Option<CommonSettings>),
+    /// ToM did not answer.
+    Unreachable,
+}
+
+impl SystemEnv {
+    /// ToM down is not "no theme" (D38).
+    pub fn with_common_fetch(self, fetch: CommonFetch) -> SystemEnv {
+        match fetch {
+            CommonFetch::Reached(common) => SystemEnv { common, ..self },
+            CommonFetch::Unreachable => self,
+        }
+    }
+}
+
+/// The page of the common settings of `user_id`, http(s) only.
+pub fn common_settings_url(template: &str, user_id: &str) -> Option<String> {
+    let username = user_id.strip_prefix('@')?.split_once(':')?.0;
+    if username.is_empty() || !template.contains("{username}") {
+        return None;
+    }
+    normalize(&template.replace("{username}", &encode(username)))
+}
+
+/// `URL.href` of an http(s) URL: scheme and host in lower case, `/` for an empty path.
+fn normalize(url: &str) -> Option<String> {
+    let (scheme, rest) = url.split_once("://")?;
+    let scheme = scheme.to_lowercase();
+    if scheme != "http" && scheme != "https" {
+        return None;
+    }
+    let end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+    let (host, tail) = rest.split_at(end);
+    if host.is_empty() || host.contains(' ') {
+        return None;
+    }
+    let slash = if tail.starts_with('/') { "" } else { "/" };
+    Some(format!("{scheme}://{}{slash}{tail}", host.to_lowercase()))
+}
+
+fn encode(text: &str) -> String {
+    let mut out = String::new();
+    for b in text.bytes() {
+        if b.is_ascii_alphanumeric() || b"-_.!~*'()".contains(&b) {
+            out.push(char::from(b));
+        } else {
+            out.push_str(&format!("%{b:02X}"));
+        }
+    }
+    out
+}
+
+/// Per kind of room (D22).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NotificationDefaults {
+    /// Direct rooms.
+    pub direct_messages: GlobalNotificationLevel,
+    /// Groups.
+    pub groups: GlobalNotificationLevel,
+}
+
+impl Preferences {
+    /// The account defaults per kind of room.
+    pub fn notification_defaults(&self) -> NotificationDefaults {
+        NotificationDefaults {
+            direct_messages: self.direct_messages,
+            groups: self.groups,
+        }
+    }
 }
 
 /// Everything a screen reads, derived in one place.
@@ -202,6 +303,12 @@ pub struct ViewSettings {
     pub bubble_align: BubbleAlign,
     /// Notifications are silenced.
     pub do_not_disturb: bool,
+    /// A common theme is in place: Appearance is disabled.
+    pub appearance_locked: bool,
+    /// A supported common language is in place: the picker is disabled.
+    pub language_locked: bool,
+    /// Link to the common settings, while locked.
+    pub common_settings_url: Option<String>,
 }
 
 impl Preferences {
@@ -249,11 +356,19 @@ impl Preferences {
     /// The one derivation every screen reads (D349).
     pub fn view(&self, env: &SystemEnv) -> ViewSettings {
         let high_contrast = self.resolve_high_contrast(env.high_contrast);
+        let common = env.common.as_ref();
+        let common_theme = common.and_then(|c| c.theme);
+        let shared_language = common.and_then(shared_language);
+        let locked = common_theme.is_some() || shared_language.is_some();
         ViewSettings {
-            scheme: self.resolve_theme(env.dark),
+            scheme: common_theme
+                .map_or_else(|| self.resolve_theme(env.dark), |t| t.scheme(env.dark)),
+            appearance_locked: common_theme.is_some(),
+            language_locked: shared_language.is_some(),
+            common_settings_url: common.filter(|_| locked).and_then(|c| c.url.clone()),
             density: self.density,
             text_scale: self.text_size.scale(),
-            language: self.resolve_language(&env.language),
+            language: shared_language.unwrap_or_else(|| self.resolve_language(&env.language)),
             hour_24: self.resolve_hour_24(env.hour_24),
             high_contrast,
             grayscale: self.grayscale,
@@ -270,6 +385,23 @@ impl Preferences {
     }
 }
 
+impl CommonTheme {
+    /// `Auto` follows the system.
+    fn scheme(self, system_is_dark: bool) -> ColorScheme {
+        match self {
+            Self::Light => ColorScheme::Light,
+            Self::Dark => ColorScheme::Dark,
+            Self::Auto if system_is_dark => ColorScheme::Dark,
+            Self::Auto => ColorScheme::Light,
+        }
+    }
+}
+
+/// The supported language of the common settings, if there is one (D67).
+fn shared_language(common: &CommonSettings) -> Option<&'static str> {
+    common.language.as_deref().and_then(base_language)
+}
+
 /// `fr-FR` and `DE_at` give `fr` and `de`; anything unsupported gives `en`.
 fn system_language(system: &str) -> &'static str {
     let base = system.split(['-', '_']).next().unwrap_or_default();
@@ -279,4 +411,10 @@ fn system_language(system: &str) -> &'static str {
 /// The entry of `SUPPORTED_LANGUAGES` that is `code`.
 fn supported(code: &str) -> Option<&'static str> {
     SUPPORTED_LANGUAGES.into_iter().find(|known| *known == code)
+}
+
+/// The first two letters, lower-cased, as the React app reads it.
+fn base_language(language: &str) -> Option<&'static str> {
+    let base: String = language.chars().take(2).collect();
+    supported(&base.to_lowercase())
 }

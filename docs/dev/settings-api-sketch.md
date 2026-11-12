@@ -15,7 +15,7 @@ rules, read-only: `twake-space-chat` `src/ui/displayPreferences.ts` (defaults an
 No UI, no disk, no clock, no manifest change (`serde_json` is already a dependency of
 `twake-domain`; `futures` of `twake-app`).
 
-Tests: `crates/twake-domain/tests/{preferences,preferences_json,notification_level}.rs`,
+Tests: `crates/twake-domain/tests/{preferences,preferences_json,notification_level,common_settings}.rs`,
 `crates/twake-app/tests/settings_state.rs`, `crates/twake-testing/tests/preferences_store.rs` and
 the contract suite `crates/twake-testing/src/preferences_contract.rs` (written, not to be loosened;
 the implementer adds `mod preferences_contract;` to `lib.rs`,
@@ -59,7 +59,8 @@ pub struct Preferences {
     pub do_not_disturb: bool,              // false
     pub autoplay: Option<bool>,            // None = as reduced motion (D259)
     pub private_receipts: bool,            // false (D55)
-    pub notifications: GlobalNotificationLevel, // All
+    pub direct_messages: GlobalNotificationLevel, // All (D22; `directMessages` of React)
+    pub groups: GlobalNotificationLevel,          // All (`groups` of React)
     pub message_sound: bool,               // true (D240)
     pub notification_text: bool,           // true (settings.md, display.e2e "notification-text")
 }
@@ -73,7 +74,37 @@ pub struct SystemEnv {
     pub reduced_motion: bool,
     pub hour_24: bool,
     pub language: String,    // BCP 47 as the OS gives it: "fr-FR", "de_AT", ""
+    pub common: Option<CommonSettings>, // common settings of ToM (D38), None = none known
 }
+
+/// `user_info` of ToM, read only: theme and language, nothing else (D38, D67).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CommonSettings {
+    pub theme: Option<CommonTheme>,  // None = the user chose nothing there
+    pub language: Option<String>,    // as ToM keeps it ("fr-FR"); None = the user chose none
+    pub url: Option<String>,         // page where they change, already `common_settings_url`-resolved
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)] pub enum CommonTheme { Light, Dark, Auto }
+
+/// What a poll of ToM gave.
+pub enum CommonFetch { Reached(Option<CommonSettings>), Unreachable }
+impl SystemEnv {
+    /// Reached(x) -> common = x. Unreachable -> unchanged (ToM down is not "no theme", D38).
+    pub fn with_common_fetch(self, fetch: CommonFetch) -> SystemEnv;
+}
+
+/// `commonSettingsUrlFor` of twakeServices.ts. `{username}` = the part of `user_id` between `@`
+/// and the first `:` (non empty), percent-encoded as `encodeURIComponent`, every occurrence
+/// replaced. None without the placeholder, without a username, if the result is no URL, or if
+/// its scheme is not http or https. Returns the normalized URL (`URL.href`: scheme and host in
+/// lower case, "/" for an empty path). `encodeURIComponent` keeps `A-Z a-z 0-9 - _ . ! ~ * ' ( )`
+/// and percent-encodes every other byte of the UTF-8 form.
+pub fn common_settings_url(template: &str, user_id: &str) -> Option<String>;
+
+/// Per kind of room (D22).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct NotificationDefaults { pub direct_messages: GlobalNotificationLevel, pub groups: GlobalNotificationLevel }
+impl Preferences { pub fn notification_defaults(&self) -> NotificationDefaults; } // helper, not tested
 
 /// Everything a screen reads, derived in one place from `Preferences` + `SystemEnv`.
 #[derive(Debug, Clone, PartialEq)]
@@ -90,9 +121,17 @@ pub struct ViewSettings {
     pub room_order: RoomOrder,
     pub bubble_align: BubbleAlign,
     pub do_not_disturb: bool,
+    /// A common theme (D38) is in place: the choices of Appearance are disabled.
+    pub appearance_locked: bool,
+    /// A supported common language is in place: the language picker is disabled (D67).
+    pub language_locked: bool,
+    /// Link to the common settings: Some only while `appearance_locked` or `language_locked`, and `common.url` is Some.
+    pub common_settings_url: Option<String>,
 }
 
 impl Preferences {
+    /// `view`: while `env.common` has a theme it wins over `theme` (Light/Dark as is, Auto =
+    /// `env.dark`); `theme` itself is never touched, so it comes back when the common theme goes.
     /// Theme: System follows `system_is_dark`.
     pub fn resolve_theme(&self, system_is_dark: bool) -> ColorScheme;
     /// `Some(x)` wins over the system.
@@ -122,7 +161,7 @@ Object, keys exactly: `version` (2), `theme` ("system"|"light"|"dark"), `density
 ("system"|"12h"|"24h"), `text_size` ("small"|"normal"|"large"), `room_order`
 ("recent"|"sections"), `wallpaper` ("default"|"none"), `bubble_align` ("own-right"|"left"),
 `grayscale`, `do_not_disturb`, `private_receipts`, `message_sound`, `notification_text` (booleans),
-`high_contrast`, `autoplay` (true, false or null), `notifications` ("all"|"mentions").
+`high_contrast`, `autoplay` (true, false or null), `direct_messages`, `groups` ("all"|"mentions").
 Keys are plain: the `app.twake.chat.*` names of the spec are Matrix account-data events (D55, D259),
 not this local file.
 
@@ -130,6 +169,12 @@ not this local file.
 missing key or a value of the wrong type or of an unknown name -> the default of **that field
 alone**; a language that is not supported -> `System` (D67). Reads for any version, the future
 ones included, with the v2 rules.
+
+### Former single level
+
+The former key `notifications` ("all"|"mentions"), at any version, fills `direct_messages` and
+`groups` when those are missing (a key of its own wins); it is never written back. The version
+stays 2.
 
 ### Migration v1 -> v2
 
@@ -146,14 +191,17 @@ A document with no `version`, or `version` 1, is read with the v1 rules, then is
 pub enum RoomNotificationLevel { Default, All, Mentions, None }
 /// The level that applies.
 pub enum NotificationLevel { All, Mentions, None }
+/// Direct room or group: picks which default applies.
+pub enum RoomKind { Direct, Group }
 
-/// Default -> the account default; All/Mentions/None -> themselves.
-pub fn effective_level(room: RoomNotificationLevel, global: GlobalNotificationLevel) -> NotificationLevel;
+/// All/Mentions/None -> themselves, whatever the defaults ("All" is firm: a room asking for every
+/// message gets them). Default -> `defaults.direct_messages` for Direct, `defaults.groups` for Group.
+pub fn effective_level(room: RoomNotificationLevel, kind: RoomKind, defaults: NotificationDefaults) -> NotificationLevel;
 
 impl NotificationLevel {
     /// All: yes. Mentions: only a mention. None: never, a mention neither (D22).
     pub fn notifies(self, is_mention: bool) -> bool;
-    /// Mentions and None: the badge is grey (D615).
+    /// None only (owner's ruling on D615): Mentions is not muted.
     pub fn is_muted(self) -> bool;
 }
 ```
@@ -197,7 +245,7 @@ impl SettingsState {
     /// One setter per field, same name: set_theme, set_density, set_language, set_time_format,
     /// set_text_size, set_room_order, set_wallpaper, set_bubble_align, set_grayscale,
     /// set_high_contrast(Option<bool>), set_do_not_disturb, set_autoplay(Option<bool>),
-    /// set_private_receipts, set_notifications, set_message_sound, set_notification_text.
+    /// set_private_receipts, set_direct_messages, set_groups, set_message_sound, set_notification_text.
     pub fn set_density(&mut self, density: Density);
     pub fn cancel(&mut self);                        // current = saved
     /// The document that was written (clone of `preferences()` taken before the save). Edits
@@ -214,5 +262,22 @@ impl SettingsState {
 
 ## 5. Open questions
 
-See the report of the test author (gaps between PRD and React, `directMessages`/`groups` split,
-push-rule switches D85, bubble style, "reduced motion" as a setting).
+Rulings of the owner, applied above: "All" is firm; muted is "None" only; two account defaults
+(`direct_messages`, `groups`, values All|Mentions as in React); the common theme wins (D38).
+
+Common settings read by the React app: `user_info.theme` and `user_info.language`, nothing else;
+the well-known `app.twake.chat.common_settings` gives `enabled` and `application_url` (the link).
+
+Common language (D67, `useSharedLanguage`): the first two letters of `CommonSettings.language`,
+lower-cased ("fr-FR" and "fra" are "fr"); if that is in `SUPPORTED_LANGUAGES` it wins over the
+local choice and over the OS language, `ViewSettings.language_locked` is true and `language` is
+it; otherwise ("ja-JP", "", one letter, None) it counts as none and nothing is locked. The local
+`Preferences.language` is never touched, so it is back when the common one goes. ToM unreachable
+keeps it (`with_common_fetch`). The link shows while either lock is on.
+
+A key `direct_messages` / `groups` that is there decides, valid or not (an invalid value is the
+default of that field); only a missing one follows the former `notifications` key.
+
+Open:
+- Push-rule switches (D85), bubble style, "reduced motion" as a setting: not in this slice.
+- Push-rule switches (D85), bubble style, "reduced motion" as a setting: not in this slice.

@@ -31,9 +31,19 @@ fn every_choice() -> Preferences {
         do_not_disturb: true,
         autoplay: Some(false),
         private_receipts: true,
-        notifications: GlobalNotificationLevel::Mentions,
+        direct_messages: GlobalNotificationLevel::Mentions,
+        groups: GlobalNotificationLevel::All,
         message_sound: false,
         notification_text: false,
+    }
+}
+
+/// Direct messages at every message, groups at mentions: the other way round from `every_choice`.
+fn groups_quiet() -> Preferences {
+    Preferences {
+        direct_messages: GlobalNotificationLevel::All,
+        groups: GlobalNotificationLevel::Mentions,
+        ..every_choice()
     }
 }
 
@@ -71,7 +81,8 @@ fn the_document_names_every_choice_with_the_documented_words() {
             "do_not_disturb": true,
             "autoplay": false,
             "private_receipts": true,
-            "notifications": "mentions",
+            "direct_messages": "mentions",
+            "groups": "all",
             "message_sound": false,
             "notification_text": false
         })
@@ -97,7 +108,8 @@ fn the_default_document_uses_the_other_words() {
             "do_not_disturb": false,
             "autoplay": null,
             "private_receipts": false,
-            "notifications": "all",
+            "direct_messages": "all",
+            "groups": "all",
             "message_sound": true,
             "notification_text": true
         })
@@ -175,7 +187,7 @@ fn a_missing_key_takes_the_default_of_that_field_alone() {
 
 #[test]
 fn an_invalid_value_takes_the_default_of_that_field_alone() {
-    let cases: [(&str, Value, Preferences); 6] = [
+    let cases: [(&str, Value, Preferences); 5] = [
         (
             "density",
             json!(42),
@@ -213,14 +225,6 @@ fn an_invalid_value_takes_the_default_of_that_field_alone() {
             json!("more"),
             Preferences {
                 high_contrast: None,
-                ..every_choice()
-            },
-        ),
-        (
-            "notifications",
-            json!("none"),
-            Preferences {
-                notifications: GlobalNotificationLevel::All,
                 ..every_choice()
             },
         ),
@@ -337,6 +341,106 @@ fn a_document_from_a_future_version_is_read_with_the_v2_rules() {
     assert_eq!(read(d), every_choice());
 }
 
+// ---------------------------------------------------------------- notification levels (D22)
+
+#[test]
+fn an_invalid_level_takes_the_default_of_that_level_alone() {
+    let mut d = doc(&every_choice());
+    d["direct_messages"] = json!("none");
+    assert_eq!(read(d).direct_messages, GlobalNotificationLevel::All);
+    let mut d = doc(&groups_quiet());
+    d["groups"] = json!(3);
+    let p = read(d);
+    assert_eq!(p.groups, GlobalNotificationLevel::All);
+    assert_eq!(p.direct_messages, GlobalNotificationLevel::All);
+}
+
+#[test]
+fn the_two_levels_round_trip_each_on_its_own() {
+    for p in [every_choice(), groups_quiet()] {
+        assert_eq!(Preferences::from_json(&p.to_json()), p);
+    }
+    assert_eq!(doc(&groups_quiet())["direct_messages"], "all");
+    assert_eq!(doc(&groups_quiet())["groups"], "mentions");
+}
+
+#[test]
+fn a_missing_level_takes_the_default_of_that_level_alone() {
+    let mut d = doc(&every_choice());
+    d.as_object_mut().unwrap().remove("direct_messages");
+    assert_eq!(read(d).direct_messages, GlobalNotificationLevel::All);
+    let mut d = doc(&groups_quiet());
+    d.as_object_mut().unwrap().remove("groups");
+    let p = read(d);
+    assert_eq!(p.groups, GlobalNotificationLevel::All);
+    assert_eq!(p.direct_messages, GlobalNotificationLevel::All);
+}
+
+#[test]
+fn the_former_single_level_sets_both_levels() {
+    let mut d = doc(&Preferences::default());
+    let fields = d.as_object_mut().unwrap();
+    fields.remove("direct_messages");
+    fields.remove("groups");
+    fields.insert("notifications".into(), json!("mentions"));
+    let p = read(d);
+    assert_eq!(p.direct_messages, GlobalNotificationLevel::Mentions);
+    assert_eq!(p.groups, GlobalNotificationLevel::Mentions);
+}
+
+#[test]
+fn the_former_single_level_is_migrated_in_a_v1_document_too() {
+    let p = read(json!({"version": 1, "notifications": "mentions"}));
+    assert_eq!(p.direct_messages, GlobalNotificationLevel::Mentions);
+    assert_eq!(p.groups, GlobalNotificationLevel::Mentions);
+}
+
+#[test]
+fn a_level_of_its_own_wins_over_the_former_single_level() {
+    let mut d = doc(&groups_quiet());
+    d["notifications"] = json!("all");
+    assert_eq!(read(d), groups_quiet());
+    let mut d = doc(&every_choice());
+    d["notifications"] = json!("mentions");
+    assert_eq!(read(d), every_choice());
+}
+
+#[test]
+fn an_invalid_level_takes_its_default_even_when_the_former_key_is_there() {
+    let p = read(json!({
+        "version": 2,
+        "notifications": "mentions",
+        "direct_messages": "none",
+        "groups": 3
+    }));
+    assert_eq!(p.direct_messages, GlobalNotificationLevel::All);
+    assert_eq!(p.groups, GlobalNotificationLevel::All);
+    let p = read(json!({
+        "version": 2,
+        "notifications": "mentions",
+        "direct_messages": "mentions",
+        "groups": "none"
+    }));
+    assert_eq!(p.direct_messages, GlobalNotificationLevel::Mentions);
+    assert_eq!(p.groups, GlobalNotificationLevel::All);
+}
+
+#[test]
+fn an_invalid_former_single_level_gives_the_defaults() {
+    let p = read(json!({"version": 2, "notifications": "none"}));
+    assert_eq!(p.direct_messages, GlobalNotificationLevel::All);
+    assert_eq!(p.groups, GlobalNotificationLevel::All);
+}
+
+#[test]
+fn a_migrated_document_is_written_without_the_former_key() {
+    let migrated = doc(&read(json!({"version": 2, "notifications": "mentions"})));
+    assert!(migrated.get("notifications").is_none());
+    assert_eq!(migrated["direct_messages"], "mentions");
+    assert_eq!(migrated["groups"], "mentions");
+    assert_eq!(migrated["version"], 2);
+}
+
 // ---------------------------------------------------------------- properties
 
 fn choice<T: Clone + std::fmt::Debug + 'static>(all: &[T]) -> impl Strategy<Value = T> {
@@ -371,6 +475,10 @@ fn any_preferences() -> impl Strategy<Value = Preferences> {
         ]),
         any::<bool>(),
         any::<bool>(),
+        choice(&[
+            GlobalNotificationLevel::All,
+            GlobalNotificationLevel::Mentions,
+        ]),
     );
     (a, b).prop_map(|(a, b)| Preferences {
         theme: a.0,
@@ -386,7 +494,8 @@ fn any_preferences() -> impl Strategy<Value = Preferences> {
         do_not_disturb: b.2,
         autoplay: b.3,
         private_receipts: b.4,
-        notifications: b.5,
+        direct_messages: b.5,
+        groups: b.8,
         message_sound: b.6,
         notification_text: b.7,
     })
@@ -430,6 +539,8 @@ fn any_document() -> impl Strategy<Value = Value> {
         "autoplay",
         "private_receipts",
         "notifications",
+        "direct_messages",
+        "groups",
         "message_sound",
         "notification_text",
     ]);
