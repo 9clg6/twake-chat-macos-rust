@@ -4,5 +4,6 @@
 pub mod button;
 pub mod color;
 pub mod icon;
+pub mod text_buffer;
 pub mod theme;
 pub mod view;

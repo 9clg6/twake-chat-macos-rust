@@ -13,7 +13,7 @@ twake-gpui = { path = "../twake-gpui" }
 twake-tokens = { path = "../twake-tokens" }
 twake-icons = { path = "../twake-icons" }
 twake-domain = { path = "../twake-domain" }
+unicode-segmentation = "1"
 
 [dev-dependencies]
 proptest = "1"
-unicode-segmentation = "1"
