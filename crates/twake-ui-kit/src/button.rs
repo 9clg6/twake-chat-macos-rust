@@ -140,29 +140,25 @@ fn with_alpha(color: Rgba8, a: u8) -> Rgba8 {
     Rgba8::new(color.r, color.g, color.b, a)
 }
 
+/// Per-size values, in the order XSmall, Small, Medium, Large.
+const fn by_size<T: Copy>(size: ButtonSize, table: [T; 4]) -> T {
+    table[size as usize]
+}
+
 const fn height_px(size: ButtonSize) -> f32 {
-    match size {
-        ButtonSize::XSmall => 24.0,
-        ButtonSize::Small => 36.0,
-        ButtonSize::Medium => 40.0,
-        ButtonSize::Large => 48.0,
-    }
+    by_size(size, [24.0, 36.0, 40.0, 48.0])
 }
 
 /// `(x, y)` of tokens.json `MuiButton`; outlined small and large follow the size rule (sketch Q2).
 const fn padding(variant: ButtonVariant, size: ButtonSize) -> (f32, f32) {
-    use ButtonSize::{Large, Medium, Small, XSmall};
-    use ButtonVariant::{Contained, Outlined, Text};
-    match (variant, size) {
-        (Outlined, XSmall) => (7.0, 3.0),
-        (_, XSmall) => (8.0, 4.0),
-        (Text, Small) => (16.0, 8.0),
-        (_, Small) => (16.0, 9.0),
-        (Contained, Medium) => (24.0, 10.0),
-        (Outlined, Medium) => (15.0, 5.0),
-        (Text, Medium) => (8.0, 10.0),
-        (Text, Large) => (10.0, 14.0),
-        (_, Large) => (32.0, 13.0),
+    match variant {
+        ButtonVariant::Contained => {
+            by_size(size, [(8.0, 4.0), (16.0, 9.0), (24.0, 10.0), (32.0, 13.0)])
+        }
+        ButtonVariant::Outlined => {
+            by_size(size, [(7.0, 3.0), (16.0, 9.0), (15.0, 5.0), (32.0, 13.0)])
+        }
+        ButtonVariant::Text => by_size(size, [(8.0, 4.0), (16.0, 8.0), (8.0, 10.0), (10.0, 14.0)]),
     }
 }
 
