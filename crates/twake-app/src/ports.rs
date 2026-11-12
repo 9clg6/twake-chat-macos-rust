@@ -1,6 +1,7 @@
 //! The ports of the room list and of the conversation (A009: boxed `Send` futures, so the UI
 //! holds them as `Arc<dyn Port>`).
 
+use crate::composer::Draft;
 use futures::future::BoxFuture;
 use futures::stream::BoxStream;
 use twake_domain::room_list::RoomListDiff;
@@ -85,4 +86,24 @@ pub trait SessionStorePort: Send + Sync {
 
     /// Forgets `user`, freeing a place; an unknown user is fine.
     fn clear(&self, user: UserId) -> BoxFuture<'_, Result<(), SessionStoreError>>;
+}
+
+/// Why the drafts cannot be kept or read.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum DraftStoreError {
+    /// The store cannot be reached.
+    #[error("the draft store is unavailable")]
+    Unavailable,
+}
+
+/// The draft of each room, kept across restarts (FR-055).
+pub trait DraftStorePort: Send + Sync {
+    /// Replaces the draft of `room`. A draft whose text is empty is a `clear`.
+    fn save(&self, room: RoomId, draft: Draft) -> BoxFuture<'_, Result<(), DraftStoreError>>;
+
+    /// The draft of `room`, if any.
+    fn load(&self, room: RoomId) -> BoxFuture<'_, Result<Option<Draft>, DraftStoreError>>;
+
+    /// Forgets the draft of `room`; an unknown room is fine.
+    fn clear(&self, room: RoomId) -> BoxFuture<'_, Result<(), DraftStoreError>>;
 }
