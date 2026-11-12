@@ -62,7 +62,8 @@ impl SettingsState {
         set_do_not_disturb(do_not_disturb: bool),
         set_autoplay(autoplay: Option<bool>),
         set_private_receipts(private_receipts: bool),
-        set_notifications(notifications: GlobalNotificationLevel),
+        set_direct_messages(direct_messages: GlobalNotificationLevel),
+        set_groups(groups: GlobalNotificationLevel),
         set_message_sound(message_sound: bool),
         set_notification_text(notification_text: bool),
     );
