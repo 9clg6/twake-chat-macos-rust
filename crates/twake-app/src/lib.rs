@@ -7,6 +7,7 @@ pub mod reactions;
 pub mod room_list;
 pub mod selection;
 pub mod session;
+pub mod settings;
 pub mod sso;
 pub mod timeline;
 pub mod typing;
