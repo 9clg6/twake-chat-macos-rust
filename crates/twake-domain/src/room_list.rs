@@ -137,15 +137,23 @@ pub enum RoomFilter {
     Favourites,
 }
 
+fn is_unread_outside_spaces(room: &RoomSummary) -> bool {
+    room.unread.is_unread() && room.kind != RoomKind::Space
+}
+
+fn is_in_spaces(room: &RoomSummary) -> bool {
+    room.kind == RoomKind::Space || room.space.is_some()
+}
+
 impl RoomFilter {
     /// Whether `room` shows under this chip.
     pub fn matches(&self, room: &RoomSummary) -> bool {
         match self {
             Self::All => true,
-            Self::Unread => room.unread.is_unread() && room.kind != RoomKind::Space,
+            Self::Unread => is_unread_outside_spaces(room),
             Self::Broadcasts => room.kind == RoomKind::Broadcast,
             Self::Directs => room.kind == RoomKind::Direct,
-            Self::Spaces => room.kind == RoomKind::Space || room.space.is_some(),
+            Self::Spaces => is_in_spaces(room),
             Self::Favourites => room.is_favourite,
         }
     }
