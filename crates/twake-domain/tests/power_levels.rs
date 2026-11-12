@@ -136,6 +136,51 @@ fn redacting_someone_else_needs_the_redact_level() {
 }
 
 #[test]
+fn in_a_v12_room_the_creator_has_infinite_power() {
+    let p = PowerLevels::new()
+        .with_events_default(100)
+        .with_state_default(100)
+        .with_redact(100)
+        .with_ban(100)
+        .with_event("m.reaction", 1000)
+        .with_creator(user("boss"))
+        .with_creator_infinite(true);
+    let boss = user("boss");
+    assert!(p.can_send_message(&boss) && p.can_send_reaction(&boss));
+    assert!(p.can_pin(&boss) && p.can_ban(&boss));
+    assert!(p.can_redact(&boss, &user("bob")));
+    assert!(p.level_of(&boss) > 1_000_000);
+}
+
+#[test]
+fn infinite_power_belongs_to_the_creator_alone() {
+    let p = PowerLevels::new()
+        .with_creator(user("boss"))
+        .with_creator_infinite(true);
+    assert!(!p.can_pin(&user("bob")));
+    assert!(!p.can_redact(&user("bob"), &user("boss")));
+    assert_eq!(p.level_of(&user("bob")), 0);
+}
+
+#[test]
+fn before_v12_the_creator_has_only_the_level_listed() {
+    let p = PowerLevels::new()
+        .with_creator(user("boss"))
+        .with_user(user("boss"), 100)
+        .with_state_default(150);
+    assert_eq!(p.level_of(&user("boss")), 100);
+    assert!(!p.can_pin(&user("boss")));
+}
+
+#[test]
+fn a_room_without_the_flag_has_no_infinite_creator_by_default() {
+    let p = PowerLevels::new()
+        .with_creator(user("boss"))
+        .with_state_default(150);
+    assert!(!p.can_pin(&user("boss")));
+}
+
+#[test]
 fn the_redact_rule_alone() {
     assert!(can_redact(true, -5, 100));
     assert!(can_redact(false, 50, 50));

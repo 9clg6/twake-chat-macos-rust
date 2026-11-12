@@ -11,7 +11,8 @@
 
 use proptest::prelude::*;
 use twake_app::message_actions::{
-    Action, BulkAction, MessageFacts, RoomCtx, menu_sections, message_actions, selection_actions,
+    Action, BulkAction, MessageFacts, RoomCtx, bulk_delete_targets, menu_sections, message_actions,
+    selection_actions,
 };
 use twake_domain::power_levels::PowerLevels;
 use twake_domain::timeline::Message;
@@ -401,11 +402,51 @@ fn bulk_unpin_replaces_pin_only_when_every_ticked_message_is_pinned() {
 }
 
 #[test]
-fn bulk_delete_needs_every_message_to_be_deletable() {
+fn bulk_delete_is_offered_when_at_least_one_message_may_be_deleted() {
     let (a, b, f) = (mine("a"), theirs("b"), facts());
     let got = selection_actions(&[pair(&a, &f), pair(&b, &f)], &room(), &me());
-    assert!(!got.contains(&BulkAction::Delete));
+    assert!(got.contains(&BulkAction::Delete));
     assert!(got.contains(&BulkAction::Copy));
+}
+
+#[test]
+fn bulk_delete_is_absent_when_no_message_may_be_deleted() {
+    let (a, b, f) = (
+        theirs("a"),
+        Message::remote(ev(3), user("carol"), ts(), "b"),
+        facts(),
+    );
+    let got = selection_actions(&[pair(&a, &f), pair(&b, &f)], &room(), &me());
+    assert_eq!(got, [BulkAction::Copy]);
+}
+
+#[test]
+fn bulk_delete_targets_only_the_allowed_messages_in_the_order_given() {
+    let (a, b, c, f) = (
+        mine("a"),
+        theirs("b"),
+        Message::remote(ev(3), me(), ts(), "c"),
+        facts(),
+    );
+    let items = [pair(&a, &f), pair(&b, &f), pair(&c, &f)];
+    assert_eq!(bulk_delete_targets(&items, &room(), &me()), [ev(1), ev(3)]);
+}
+
+#[test]
+fn a_moderator_deletes_every_ticked_message() {
+    let (a, b, f) = (mine("a"), theirs("b"), facts());
+    let items = [pair(&a, &f), pair(&b, &f)];
+    assert_eq!(
+        bulk_delete_targets(&items, &moderator(), &me()),
+        [ev(1), ev(2)]
+    );
+}
+
+#[test]
+fn nothing_ticked_or_nothing_allowed_targets_nothing() {
+    assert!(bulk_delete_targets(&[], &moderator(), &me()).is_empty());
+    let (b, f) = (theirs("b"), facts());
+    assert!(bulk_delete_targets(&[pair(&b, &f)], &room(), &me()).is_empty());
 }
 
 #[test]
@@ -417,7 +458,7 @@ fn a_one_message_selection_follows_that_message() {
 
 proptest! {
     #[test]
-    fn bulk_delete_is_offered_exactly_when_every_message_may_be_deleted(
+    fn bulk_delete_is_offered_exactly_when_it_has_a_target(
         own in prop::collection::vec(any::<bool>(), 1..6),
         level in prop::sample::select(vec![0i64, 49, 50, 100]),
     ) {
@@ -427,7 +468,12 @@ proptest! {
             .collect();
         let f = facts();
         let items: Vec<_> = msgs.iter().map(|m| (m, &f)).collect();
-        let want = level >= 50 || own.iter().all(|o| *o);
-        prop_assert_eq!(selection_actions(&items, &r, &me()).contains(&BulkAction::Delete), want);
+        let targets = bulk_delete_targets(&items, &r, &me());
+        let want: usize = if level >= 50 { own.len() } else { own.iter().filter(|o| **o).count() };
+        prop_assert_eq!(targets.len(), want);
+        prop_assert_eq!(
+            selection_actions(&items, &r, &me()).contains(&BulkAction::Delete),
+            want > 0
+        );
     }
 }

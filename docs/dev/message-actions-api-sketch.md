@@ -20,6 +20,10 @@ Tests: `crates/twake-domain/tests/{reaction,power_levels,pinned}.rs`,
 `twake_testing::contract::message_actions`). `twake-testing/src/lib.rs` must declare
 `mod message_actions_contract;` (done by the test author) and re-export `FakeMessageActions`.
 
+Notes: the PRD FR-075 line "recent first" for the quick reactions is stale; D234 (fixed row) wins.
+Deviation from the React client: Edit also needs the right to send messages (it is an
+`m.room.message`); React does not check it.
+
 Out of scope (YAGNI, not in the brief): Forward, Save, Edit history, "N Seen", Download, assistant
 entries (D201), the full emoji picker, threads beyond the "Start a thread" entry, UI.
 
@@ -81,6 +85,10 @@ impl PowerLevels {
     pub fn with_state_default(self, level: i64) -> Self;
     pub fn with_redact(self, level: i64) -> Self;
     pub fn with_ban(self, level: i64) -> Self;
+    /// The creator of the room, and whether this room (v12) gives the creator infinite power:
+    /// then every `can_*` is true for them and `level_of` is `i64::MAX`. Off by default.
+    pub fn with_creator(self, user: UserId) -> Self;
+    pub fn with_creator_infinite(self, infinite: bool) -> Self;
 
     pub fn level_of(&self, user: &UserId) -> i64;            // users[user] or users_default
     /// Sending a message-like event of this type: `events[type]` or `events_default`.
@@ -202,9 +210,14 @@ pub fn menu_sections(actions: &[Action]) -> Vec<Vec<Action>>;
 pub enum BulkAction { Copy, Pin, Unpin, Delete }
 
 /// The bar of a selection (D183, D260), in order Copy, Pin|Unpin, Delete. Empty selection: none.
-/// Pin only if `can_pin`; `Unpin` when every ticked message is pinned, else `Pin`. Delete only
-/// when it is permitted for EVERY ticked message (own, or `can_redact`).
+/// Pin only if `can_pin`; `Unpin` when every ticked message is pinned, else `Pin`. Delete when at
+/// least one ticked message is deletable (own, or `can_redact`): it applies to that subset.
 pub fn selection_actions(items: &[(&Message, &MessageFacts)], room: &RoomCtx, me: &UserId) -> Vec<BulkAction>;
+
+/// The messages a bulk Delete will remove: the ticked ones that are own or redactable, in the
+/// order given, by event id. The others are ignored (a copy of the React client). Messages with
+/// no event id are skipped.
+pub fn bulk_delete_targets(items: &[(&Message, &MessageFacts)], room: &RoomCtx, me: &UserId) -> Vec<EventId>;
 ```
 
 ### `twake_app::selection` (dark bar of ticked messages, D183)
@@ -218,7 +231,8 @@ impl Selection {
     pub fn is_active(&self) -> bool;
     pub fn len(&self) -> usize;                       // "N selected"
     pub fn contains(&self, id: &EventId) -> bool;
-    /// A press: ticks, or unticks if ticked. The anchor moves to `id`.
+    /// A press: ticks, or unticks if ticked. The anchor moves to `id`. Unticking the last one
+    /// leaves the mode (`is_active` false).
     pub fn toggle(&mut self, id: EventId);
     /// Shift+click: ticks every message of `order` from the anchor to `id` included (either
     /// direction), keeps the ones already ticked; the anchor moves to `id`. No anchor, or an id
@@ -230,6 +244,7 @@ impl Selection {
     pub fn ids(&self, order: &[EventId]) -> Vec<EventId>;
 }
 ```
+Invariant: `is_active() == (len() > 0)` after any call (a tick while inactive starts the mode).
 Never a duplicate in `ids`; `len` counts distinct ids.
 
 ### Port (`twake_app::ports`, A009)

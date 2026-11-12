@@ -56,6 +56,26 @@ fn a_press_ticks_and_a_second_press_unticks() {
 }
 
 #[test]
+fn unticking_the_last_message_leaves_the_mode() {
+    let mut s = Selection::new();
+    s.start(ev(1));
+    s.toggle(ev(1));
+    assert!(!s.is_active());
+    assert_eq!(s.len(), 0);
+}
+
+#[test]
+fn unticking_one_of_two_keeps_the_mode_until_the_last_goes() {
+    let mut s = Selection::new();
+    s.start(ev(1));
+    s.toggle(ev(2));
+    s.toggle(ev(1));
+    assert!(s.is_active());
+    s.toggle(ev(2));
+    assert!(!s.is_active());
+}
+
+#[test]
 fn the_first_message_can_be_unticked_too() {
     let mut s = Selection::new();
     s.start(ev(1));
@@ -154,6 +174,7 @@ proptest! {
             uniq.dedup();
             prop_assert_eq!(&uniq, &ids);
             prop_assert!(s.len() <= 6);
+            prop_assert_eq!(s.is_active(), s.len() > 0);
             prop_assert_eq!(ids.len(), s.len());
         }
     }
