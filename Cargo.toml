@@ -1,7 +1,38 @@
-[package]
-name = "twake-chat"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+members = ["crates/*", "xtask"]
+resolver = "3"
 
-[dependencies]
-gpui = "0.2.2"
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+dbg_macro = "deny"
+todo = "deny"
+undocumented_unsafe_blocks = "deny"
+cognitive_complexity = "warn"
+too_many_lines = "warn"
+
+[profile.dev]
+debug = "limited"
+split-debuginfo = "unpacked"
+
+[profile.dev.package."*"]
+opt-level = 2
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+
+[profile.release-fast]
+inherits = "release"
+lto = "off"

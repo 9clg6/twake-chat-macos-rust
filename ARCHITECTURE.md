@@ -90,10 +90,10 @@ Arrow = "MAY depend on". An internal edge not listed is forbidden.
 
 Hard rules (checked by `cargo xtask check-deps` in CI, plus `cargo-deny` `[bans]` wrappers):
 
-1. `twake-domain` and `twake-app` MUST NOT depend on an adapter, on GPUI, or on a Tokio runtime
-   (only `futures` and `tokio::sync` types).
+1. `twake-domain` and `twake-app` MUST NOT depend on an adapter, on GPUI, or on `tokio` at all
+   (only `futures`; decision A011/Q6).
 2. `twake-ui*` MUST NOT depend on an adapter crate. Only `twake-desktop` imports adapters.
-3. `twake-tokens` and `twake-icons` MUST stay GPUI-free and dependency-free so another Twake
+3. `twake-tokens` and `twake-icons` MUST stay GPUI-free and free of dependencies (optional `serde` feature only; A011/Q7) so another Twake
    Rust app (or UI toolkit) can reuse them.
 4. No dependency cycles; ports live in `twake-app` so cycles cannot form.
 5. `unsafe` is forbidden everywhere except `twake-platform` (section 9).
@@ -306,12 +306,14 @@ Enforced in CI, ratchet style (limits can only tighten; a suppression list can o
 | S8 | SSO loopback against the Twake Synapse (redirect URL allowed by the IdP?). | Sign-in completed on macOS with a loopback port. |
 | S9 | i18n format: read the web `en.json` (plurals, interpolation, ICU?) before fixing Fluent vs generating from the web files. | Decision A006 written with a sample of 20 real strings. |
 
-**S1 gates all `twake-ui-kit` and `twake-ui` work.** GPUI 0.2.2 was published 2025-10-22 and has
-no AccessKit, so the VoiceOver target of section 10 is unreachable on it; a facade re-export
-only swaps the source in one line if the APIs match, which S1 must also verify. Until S1 is
-decided, only the spec, the workspace skeleton, `twake-domain`, `twake-app`, `twake-tokens`,
-`twake-icons` (GPUI-free crates) and the adapters may be built; `twake-gpui` re-exports
-`gpui = "0.2.2"` (what builds today in this repo) and nothing visual beyond the spike lands.
+**S1 does not gate UI work (decision A010, Clément, 2026-11-12).** UI development starts now on
+`gpui = "0.2.2"` (what builds today in this repo), behind `twake-gpui`. GPUI 0.2.2 was published
+2025-10-22 and has no AccessKit, so the VoiceOver target of section 10 is unreachable on it, and
+moving to another source later (Zed git, a fork) may force UI rework; that cost is accepted.
+To keep it small: every GPUI import goes through `twake_gpui`, GPUI-specific code stays in
+`twake-ui-kit` and `twake-ui`, and the tokens, icons, domain and adapters stay GPUI-free.
+S1 runs in parallel, time-boxed to 2 days, and ends with a decision to stay or migrate; a
+migration is its own PR.
 
 ## 13b. Provisional rules
 
@@ -334,10 +336,10 @@ by a spike:
   risk. Product decisions of the React app keep their `Dnn` and are referenced, not renumbered.
 - A deviation from this file = a new `Axxx` merged first. A decision of the React app
   (`DECISION.md`) that the code here contradicts is **pointed out**, never settled silently.
-- Seed decisions (to be written as `A001`–`A009` in the first commit of the workspace):
+- Seed decisions (to be written as `A001`–`A010` in the first commit of the workspace):
   A001 flat crates + prefix `twake-`; A002 GPUI behind `twake-gpui`; A003 exact-pinned
   matrix-sdk, one adapter; A004 one Tokio runtime, 2–4 workers; A005 keychain-only secrets;
-  A006 Fluent for i18n; A007 tokens/icons generated and GPUI-free; A008 nightly-only E2E; A009 ports return boxed Send futures (dyn-compatible).
+  A006 Fluent for i18n; A007 tokens/icons generated and GPUI-free; A008 nightly-only E2E; A009 ports return boxed Send futures (dyn-compatible); A010 UI starts on gpui 0.2.2, S1 does not gate it.
 - Every PR states which sections of this file it touches and, for UI, which inventory ids it ports.
 
 ## 15. Definition of done for a feature

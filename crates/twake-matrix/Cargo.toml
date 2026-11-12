@@ -1,0 +1,13 @@
+[package]
+name = "twake-matrix"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+twake-app = { path = "../twake-app" }
+twake-domain = { path = "../twake-domain" }

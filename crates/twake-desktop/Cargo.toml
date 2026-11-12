@@ -1,0 +1,26 @@
+[package]
+name = "twake-desktop"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+twake-domain = { path = "../twake-domain" }
+twake-app = { path = "../twake-app" }
+twake-matrix = { path = "../twake-matrix" }
+twake-services = { path = "../twake-services" }
+twake-media = { path = "../twake-media" }
+twake-store = { path = "../twake-store" }
+twake-platform = { path = "../twake-platform" }
+twake-calls = { path = "../twake-calls" }
+twake-i18n = { path = "../twake-i18n" }
+twake-tokens = { path = "../twake-tokens" }
+twake-icons = { path = "../twake-icons" }
+twake-gpui = { path = "../twake-gpui" }
+twake-ui-kit = { path = "../twake-ui-kit" }
+twake-ui = { path = "../twake-ui" }
+tokio = { version = "1", default-features = false, features = ["rt-multi-thread"] }
