@@ -5910,6 +5910,7 @@ dependencies = [
 name = "twake-ui"
 version = "0.1.0"
 dependencies = [
+ "proptest",
  "twake-app",
  "twake-domain",
  "twake-gpui",
