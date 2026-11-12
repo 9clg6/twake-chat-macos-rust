@@ -5,4 +5,5 @@ pub mod avatar;
 mod clock;
 pub mod room_row;
 pub mod timeline_rows;
+pub mod view;
 pub mod virtual_list;

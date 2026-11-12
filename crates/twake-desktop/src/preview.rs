@@ -1,0 +1,126 @@
+//! `--preview`: the room list and a conversation on fixtures, no account and no server.
+
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+use twake_app::room_list::RoomListState;
+use twake_app::timeline::TimelineState;
+use twake_domain::room_list::{RoomKind, RoomListDiff, RoomSummary};
+use twake_domain::timeline::TimelineDiff;
+use twake_domain::{RoomId, Timestamp};
+use twake_gpui::{
+    AppContext, Context, Entity, IntoElement, ParentElement, Render, Styled, Window, div,
+};
+use twake_i18n::Locale;
+use twake_ui::timeline_rows::{TimelineContext, timeline_rows};
+use twake_ui::view::{RoomListView, RoomSelected, TimelineView};
+use twake_ui_kit::theme::Theme;
+use twake_ui_kit::view::hsla;
+
+use crate::preview_data::{PreviewData, preview_data};
+
+/// How many messages before the end the "New messages" marker stands.
+const UNREAD_TAIL: usize = 20;
+/// Own messages up to this share of the history are read by the others.
+const READ_SHARE: usize = 10;
+
+/// The two columns.
+pub struct Preview {
+    list: Entity<RoomListView>,
+    timeline: Entity<TimelineView>,
+    data: PreviewData,
+    rooms: HashMap<RoomId, RoomSummary>,
+    locale: Arc<Locale>,
+    now: Timestamp,
+    theme: Theme,
+}
+
+fn now() -> Timestamp {
+    let elapsed = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default();
+    Timestamp::from_millis(u64::try_from(elapsed.as_millis()).unwrap_or(0))
+}
+
+impl Preview {
+    /// Builds the fixtures, the room list state and the first conversation (the 10 000 messages).
+    pub fn new(dark: bool, bench: bool, cx: &mut Context<Self>) -> Self {
+        let now = now();
+        let theme = Theme::system(dark);
+        let data = preview_data(now);
+        let lang = std::env::var("LANG").unwrap_or_default();
+        let locale = Arc::new(Locale::bundled(&lang, 0));
+        let mut state = RoomListState::new();
+        state.apply(vec![RoomListDiff::Reset(data.rooms.clone())]);
+        let list = cx.new(|_| RoomListView::new(&state, now, &locale, theme));
+        let timeline = cx.new(|_| TimelineView::new(theme));
+        cx.subscribe(&list, |this, _, event: &RoomSelected, cx| {
+            this.open(&event.0, cx);
+        })
+        .detach();
+        let rooms = data
+            .rooms
+            .iter()
+            .map(|r| (r.id.clone(), r.clone()))
+            .collect();
+        let preview = Self {
+            list,
+            timeline,
+            data,
+            rooms,
+            locale,
+            now,
+            theme,
+        };
+        let big = preview.data.big_room.clone();
+        preview.list.update(cx, |list, cx| list.select(big, cx));
+        if bench {
+            preview
+                .timeline
+                .update(cx, |timeline, cx| timeline.start_bench(cx));
+        }
+        preview
+    }
+
+    fn open(&mut self, id: &RoomId, cx: &mut Context<Self>) {
+        let (Some(room), Some(history)) = (self.rooms.get(id), self.data.histories.get(id)) else {
+            return;
+        };
+        let mut state = TimelineState::new(self.locale.utc_offset_secs());
+        state.apply(TimelineDiff::Reset(history.clone()));
+        let read_up_to = history
+            .get(history.len() - history.len() / READ_SHARE)
+            .and_then(|m| m.event_id().cloned());
+        if let Some(event) = history
+            .len()
+            .checked_sub(UNREAD_TAIL)
+            .and_then(|n| history.get(n))
+            .and_then(|m| m.event_id())
+        {
+            state.mark_new_messages_from(event.clone());
+        }
+        let ctx = TimelineContext {
+            me: &self.data.me,
+            is_direct: room.kind == RoomKind::Direct,
+            names: &self.data.names,
+            read_by_others_up_to: read_up_to.as_ref(),
+        };
+        let rows = timeline_rows(&state.items(), &ctx, self.now, &self.locale);
+        let title = room.name.clone();
+        self.timeline.update(cx, |timeline, cx| {
+            timeline.set_conversation(title, rows, cx)
+        });
+    }
+}
+
+impl Render for Preview {
+    fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
+        div()
+            .flex()
+            .size_full()
+            .bg(hsla(self.theme.colors().background.default))
+            .child(self.list.clone())
+            .child(self.timeline.clone())
+    }
+}
