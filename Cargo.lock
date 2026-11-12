@@ -5844,6 +5844,7 @@ dependencies = [
  "proptest",
  "thiserror 2.0.21",
  "twake-domain",
+ "url",
 ]
 
 [[package]]
