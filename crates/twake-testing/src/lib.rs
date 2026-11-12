@@ -1,6 +1,7 @@
 //! Fakes of every port, fixtures, builders and contract suites; dev-dependency only.
 
 pub mod contract;
+mod draft_store_contract;
 mod fake_room_list;
 mod fake_session_store;
 mod fake_timeline;

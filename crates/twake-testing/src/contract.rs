@@ -20,6 +20,7 @@ use twake_domain::room_list::{RoomKind, RoomListDiff, RoomSummary};
 use twake_domain::timeline::{Message, SendState, TimelineDiff};
 use twake_domain::{EventId, RoomId, Timestamp, UserId};
 
+pub use crate::draft_store_contract::draft_store;
 pub use crate::session_store_contract::session_store;
 
 /// The outcome of a suite: `Ok(())`, or the first rule that does not hold.
