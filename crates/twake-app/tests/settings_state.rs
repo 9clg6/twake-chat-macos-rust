@@ -10,8 +10,8 @@
 
 use twake_app::settings::SettingsState;
 use twake_domain::preferences::{
-    BubbleAlign, ColorScheme, CommonSettings, CommonTheme, Density, GlobalNotificationLevel,
-    HourCycle, Language, Preferences, RoomOrder, SystemEnv, TextSize, ThemeChoice, Wallpaper,
+    BubbleAlign, ColorScheme, Density, GlobalNotificationLevel, HourCycle, Language, Preferences,
+    RoomOrder, SystemEnv, TextSize, ThemeChoice, Wallpaper,
 };
 
 fn fresh() -> SettingsState {
@@ -62,8 +62,7 @@ fn every_setter_changes_its_own_field_only() {
     s.set_do_not_disturb(true);
     s.set_autoplay(Some(false));
     s.set_private_receipts(true);
-    s.set_direct_messages(GlobalNotificationLevel::Mentions);
-    s.set_groups(GlobalNotificationLevel::All);
+    s.set_notifications(GlobalNotificationLevel::Mentions);
     s.set_message_sound(false);
     s.set_notification_text(false);
     assert_eq!(
@@ -82,8 +81,7 @@ fn every_setter_changes_its_own_field_only() {
             do_not_disturb: true,
             autoplay: Some(false),
             private_receipts: true,
-            direct_messages: GlobalNotificationLevel::Mentions,
-            groups: GlobalNotificationLevel::All,
+            notifications: GlobalNotificationLevel::Mentions,
             message_sound: false,
             notification_text: false,
         }
@@ -262,40 +260,4 @@ fn a_document_from_another_writer_reaches_the_view() {
     let mut s = fresh();
     s.apply_external(compact());
     assert_eq!(s.view(&SystemEnv::default()).density, Density::Compact);
-}
-
-// ---------------------------------------------------------------- common settings (D38)
-
-fn common(theme: CommonTheme) -> SystemEnv {
-    SystemEnv {
-        common: Some(CommonSettings {
-            theme: Some(theme),
-            url: None,
-        }),
-        ..SystemEnv::default()
-    }
-}
-
-#[test]
-fn a_theme_picked_while_the_common_theme_wins_is_kept_but_not_shown() {
-    let mut s = fresh();
-    s.set_theme(ThemeChoice::Dark);
-    let env = common(CommonTheme::Light);
-    assert_eq!(s.view(&env).scheme, ColorScheme::Light);
-    assert!(s.view(&env).appearance_locked);
-    assert_eq!(s.preferences().theme, ThemeChoice::Dark);
-    assert!(s.is_dirty());
-}
-
-#[test]
-fn the_local_theme_comes_back_when_the_common_theme_goes() {
-    let mut s = fresh();
-    s.set_theme(ThemeChoice::Dark);
-    assert_eq!(
-        s.view(&common(CommonTheme::Light)).scheme,
-        ColorScheme::Light
-    );
-    let gone = SystemEnv::default();
-    assert_eq!(s.view(&gone).scheme, ColorScheme::Dark);
-    assert!(!s.view(&gone).appearance_locked);
 }
