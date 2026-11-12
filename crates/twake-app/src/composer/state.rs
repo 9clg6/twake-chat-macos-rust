@@ -30,7 +30,6 @@ struct Aside {
 /// The composer of one room.
 #[derive(Debug)]
 pub struct ComposerState {
-    room: RoomId,
     me: UserId,
     text: String,
     selection: Selection,
@@ -43,10 +42,10 @@ pub struct ComposerState {
 }
 
 impl ComposerState {
-    /// An empty composer: cursor 0, no banner, enabled, no sources.
-    pub fn new(room: RoomId, me: UserId) -> Self {
+    /// An empty composer: cursor 0, no banner, enabled, no sources. It does not hold the room: the
+    /// screen pairs it with the room whose draft it keeps.
+    pub fn new(_room: RoomId, me: UserId) -> Self {
         Self {
-            room,
             me,
             text: String::new(),
             selection: Selection { anchor: 0, head: 0 },
@@ -57,11 +56,6 @@ impl ComposerState {
             sources: Sources::default(),
             dismissed: None,
         }
-    }
-
-    /// The room it writes in.
-    pub fn room(&self) -> &RoomId {
-        &self.room
     }
 
     /// What is typed.
