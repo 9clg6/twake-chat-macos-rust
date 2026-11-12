@@ -71,7 +71,7 @@ for (const [, attrs, body] of symbols) {
     need.forEach(walk)
     const rename = t => t.replace(/url\(#([^)]*)\)|href="#([^"]*)"/g, (x, u, h) => (u ? `url(#${id}-${u})` : `href="#${id}-${h}"`))
     const defs = [...used].sort().map(r => rename(chunk[r].replace(`id="${r}"`, `id="${id}-${r}"`))).join('')
-    out = `<defs>${defs}</defs>${rename(body)}`
+    out = `<defs>${defs}</defs>${rename(body).replace(/\bid="([^"]*)"/g, (x, l) => `id="${id}-${l}"`)}`
     inlined.push(id)
   }
   icons[id] = { viewBox: viewBox ?? '0 0 16 16', body: out }
