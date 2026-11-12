@@ -62,3 +62,9 @@ merged before the code that needs it. Product decisions of the React app keep th
 - Decision: UI development starts now on `gpui = "0.2.2"` behind `twake-gpui`. S1 runs in parallel, time-boxed to 2 days, and ends with a decision to stay or migrate.
 - Consequences: possible UI rework on migration, bounded by the `twake_gpui` facade (every GPUI import goes through it) and by the GPUI-free crates (tokens, icons, domain, adapters).
 - Risk: gpui 0.2.2 has no AccessKit, so the VoiceOver target of section 10 is unreachable on it.
+
+## A011 Dependency check: open questions of the workspace tests
+- Context: `xtask check-deps` turns ARCHITECTURE.md section 3 into code; five points of the document were silent.
+- Decision: (Q4) `twake-desktop` has no normal dependency on `twake-testing` for now, so `--preview` on fakes waits for a decision. (Q5) `twake-tokens` and `twake-icons` may carry `serde` behind an optional feature; the graph check reads `cargo metadata` without features, so it lets `serde` through on those two and nothing else. (Q6) `twake-domain` and `twake-app` depend on no `tokio*` crate, dev-dependencies included; they use `futures` only. (Q7) Dev-dependencies are not counted against rule 3; they follow the edge table and P2.
+- Consequences: ARCHITECTURE.md rule 1 ("`tokio::sync` types") is stricter in the check than in the text; the text is read as superseded by this note.
+- Risk: a core crate that needs `tokio::sync` must change this decision first.
