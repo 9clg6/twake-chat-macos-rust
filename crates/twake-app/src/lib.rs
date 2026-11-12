@@ -2,4 +2,6 @@
 
 pub mod ports;
 pub mod room_list;
+pub mod session;
+pub mod sso;
 pub mod timeline;

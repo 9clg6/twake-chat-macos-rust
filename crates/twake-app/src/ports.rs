@@ -3,9 +3,10 @@
 
 use futures::future::BoxFuture;
 use futures::stream::BoxStream;
-use twake_domain::RoomId;
 use twake_domain::room_list::RoomListDiff;
+use twake_domain::session::Session;
 use twake_domain::timeline::TimelineDiff;
+use twake_domain::{RoomId, UserId};
 
 /// Messages in a page of history.
 pub const TIMELINE_PAGE_SIZE: usize = 30;
@@ -54,4 +55,34 @@ pub trait TimelinePort: Send + Sync {
     /// Returns once accepted; the local echo arrives as `[Append([Message::local(..)])]`, the
     /// server event later as an `Append` carrying the same transaction id.
     fn send_text(&self, room: RoomId, body: String) -> BoxFuture<'_, Result<(), TimelineError>>;
+}
+
+/// Accounts signed in at once (D373).
+pub const MAX_ACCOUNTS: usize = 5;
+
+/// Why the session store failed.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum SessionStoreError {
+    /// The keychain cannot be reached (A005: no plaintext fallback).
+    #[error("the session store is unavailable")]
+    Unavailable,
+    /// A sixth distinct account.
+    #[error("too many accounts")]
+    TooManyAccounts,
+}
+
+/// The sessions of the signed-in accounts, in the OS keychain (A005, NFR-015): one per user id.
+pub trait SessionStorePort: Send + Sync {
+    /// Inserts, or replaces the session of the same user id in place (its place is kept).
+    /// A sixth distinct user id is refused and nothing changes.
+    fn save(&self, session: Session) -> BoxFuture<'_, Result<(), SessionStoreError>>;
+
+    /// The session of `user`, if any.
+    fn load(&self, user: UserId) -> BoxFuture<'_, Result<Option<Session>, SessionStoreError>>;
+
+    /// In the order the accounts were first saved (the first is the default one, D373).
+    fn list(&self) -> BoxFuture<'_, Result<Vec<Session>, SessionStoreError>>;
+
+    /// Forgets `user`, freeing a place; an unknown user is fine.
+    fn clear(&self, user: UserId) -> BoxFuture<'_, Result<(), SessionStoreError>>;
 }

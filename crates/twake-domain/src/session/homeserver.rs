@@ -50,6 +50,25 @@ fn host_of(authority: &str) -> &str {
     &authority[..end]
 }
 
+/// https, or http on this machine; no credentials, query or fragment.
+fn check_safe(url: &Url) -> Result<(), HomeserverUrlError> {
+    let secure = url.scheme() == "https"
+        || (url.scheme() == "http" && url.host().as_ref().is_some_and(is_this_machine));
+    if !secure {
+        return Err(HomeserverUrlError::NotHttps);
+    }
+    if !url.username().is_empty() || url.password().is_some() {
+        return Err(HomeserverUrlError::HasUserinfo);
+    }
+    if url.query().is_some() {
+        return Err(HomeserverUrlError::HasQuery);
+    }
+    if url.fragment().is_some() {
+        return Err(HomeserverUrlError::HasFragment);
+    }
+    Ok(())
+}
+
 impl HomeserverUrl {
     /// Parses and normalises an address.
     pub fn parse(s: &str) -> Result<Self, HomeserverUrlError> {
@@ -58,20 +77,7 @@ impl HomeserverUrl {
             return Err(HomeserverUrlError::Empty);
         }
         let url = Url::parse(s).map_err(|_| HomeserverUrlError::Invalid)?;
-        let secure = url.scheme() == "https"
-            || (url.scheme() == "http" && url.host().as_ref().is_some_and(is_this_machine));
-        if !secure {
-            return Err(HomeserverUrlError::NotHttps);
-        }
-        if !url.username().is_empty() || url.password().is_some() {
-            return Err(HomeserverUrlError::HasUserinfo);
-        }
-        if url.query().is_some() {
-            return Err(HomeserverUrlError::HasQuery);
-        }
-        if url.fragment().is_some() {
-            return Err(HomeserverUrlError::HasFragment);
-        }
+        check_safe(&url)?;
         let port = url.port().map(|p| format!(":{p}")).unwrap_or_default();
         Ok(Self(format!(
             "{}://{}{port}{}",
@@ -102,9 +108,8 @@ impl HomeserverUrl {
     /// this machine. `false` is not final: the well-known of the server name may point here.
     pub fn serves_directly(&self, user: &UserId) -> bool {
         let (address, name) = (self.authority(), user.server_name());
-        let this_machine = |authority| {
-            matches!(host_of(authority), "localhost" | "127.0.0.1" | "[::1]")
-        };
+        let this_machine =
+            |authority| matches!(host_of(authority), "localhost" | "127.0.0.1" | "[::1]");
         address == name || (this_machine(address) && this_machine(name))
     }
 }
