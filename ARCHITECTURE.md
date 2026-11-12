@@ -5,6 +5,9 @@ A rule is changed only by a numbered decision in `docs/decisions.md` (section 14
 *before* the code that needs it. "MUST" and "MUST NOT" are checked by CI where a check is
 named; where none is named, the reviewer checks it and a check is added.
 
+Traceability: every FR and NFR of `docs/prd-*.md` maps to a crate and a section here in
+`docs/traceability.md` (written with the workspace skeleton, checked by `xtask`).
+
 Inputs: `docs/product-brief-*.md`, `docs/prd-*.md`, `docs/spec/feature-inventory.md`,
 `docs/spec/design-system.md`, `docs/research/rust-architecture-sota.md` (claims there are
 marked verified / secondhand / inferred; this file only relies on the verified ones, and
@@ -40,7 +43,11 @@ lists the rest as spikes in section 13).
 ## 3. Layers and crates
 
 Flat `crates/` directory, one directory per crate, directory name = crate name.
-Arrow = "MAY depend on". Anything not listed is forbidden.
+The table governs **internal edges** (which workspace crate may depend on which) and the
+**exclusive external systems** of P2. Other third-party crates (`serde`, `futures`,
+`async-trait`, OS-specific crates, Fluent, store backends…) are free under P8 and the
+supply-chain gates, provided they do not break a hard rule below.
+Arrow = "MAY depend on". An internal edge not listed is forbidden.
 
 ```
                       twake-desktop  (composition root, binary)
@@ -67,16 +74,16 @@ Arrow = "MAY depend on". Anything not listed is forbidden.
 | `twake-app` | Use cases grouped as the web `ChatApp` (`rooms`, `messages`, `threads`, `encryption`, `calls`…) and the **port traits**. | `twake-domain` |
 | `twake-matrix` | Adapter over `matrix-sdk` / `matrix-sdk-ui`: sync, room list, timeline, crypto, SQLite store, SSO login. Produces domain snapshots and diffs. | `twake-app`, `twake-domain`, `matrix-sdk*`, `tokio` |
 | `twake-services` | HTTP adapters: ToM, side service (assistants, suggestions, analytics), Meet REST, GIF proxy. | `twake-app`, `twake-domain`, `reqwest` (rustls) |
-| `twake-media` | Fetch scheduling, decode off-thread, thumbnails, pixel-budget cache, waveform. | `twake-domain`, `image` |
+| `twake-media` | Scheduling, decode off-thread, thumbnails, pixel-budget cache, waveform. Gets bytes through the `Media` port (`twake-app`); never does HTTP itself. | `twake-app`, `twake-domain`, `image` |
 | `twake-store` | `SecretStore` over `keyring-core`, preferences file, store-passphrase generation. | `twake-app`, `twake-domain`, `keyring-core`, `zeroize` |
 | `twake-platform` | Notifications, deep links, single instance, tray, badge, accent colour. `cfg(target_os)` modules. | `twake-app`, `twake-domain` |
 | `twake-calls` | MatrixRTC signalling + LiveKit media. Optional (`calls` feature). | `twake-app`, `twake-domain`, `livekit` |
 | `twake-i18n` | `Translator`, Fluent bundles, locale detection, plural rules. | `twake-domain` |
-| `twake-tokens` | Design tokens (colour schemes, type scale, radii, shadows, motion, breakpoints). **Generated** from `docs/spec/tokens.json`. No GPUI. | `serde` only |
+| `twake-tokens` | Design tokens (colour schemes, type scale, radii, shadows, motion, breakpoints). **Generated** from `docs/spec/tokens.json`. No GPUI. | none (`serde` behind an optional feature) |
 | `twake-icons` | The twake-icons SVG set as static data + lookup. **Generated**. No GPUI. | none |
 | `twake-gpui` | The only crate naming the GPUI source; re-exports it; runtime glue (section 5). | `gpui*`, `tokio` |
 | `twake-ui-kit` | Design-system components mirroring `@linagora/twake-mui` and `ds/` (Button, IconAction with tooltip, Avatar, Chip, ListRow, TextInput…). No Matrix, no use cases. | `twake-gpui`, `twake-tokens`, `twake-icons`, `twake-domain` |
-| `twake-ui` | Screens and entities (room list, timeline, composer, room info, settings, onboarding). Calls use cases only. | `twake-ui-kit`, `twake-app`, `twake-domain`, `twake-i18n` |
+| `twake-ui` | Screens and entities (room list, timeline, composer, room info, settings, onboarding). Calls use cases only. | `twake-ui-kit`, `twake-gpui`, `twake-app`, `twake-domain`, `twake-i18n` |
 | `twake-testing` | Fakes of every port, fixtures (10k-message room), builders, **contract suites**. dev-dependency only. | `twake-app`, `twake-domain` |
 | `twake-desktop` | Composition root binary: runtime, wiring, CLI (`--preview`, `--profile`). | all |
 | `xtask` | `check-deps`, `check-size`, `tokens`, `icons`, `package`, `notarize`, `release`. | `cargo_metadata` |
@@ -109,7 +116,10 @@ Hard rules (checked by `cargo xtask check-deps` in CI, plus `cargo-deny` `[bans]
 - Domain types are immutable values (`Clone`, `Eq` where meaningful). Collections that change
   incrementally use `imbl` (structural sharing) so snapshots are cheap.
 - Ids are newtypes (`RoomId`, `EventId`, `UserId`), never bare `String`.
-- Ports are `trait`s with native `async fn`; grouped by topic like the web `ChatApp`
+- Ports are `trait`s whose async methods return **boxed `Send` futures** (`#[async_trait]` or an
+  explicit `BoxFuture`), because the UI holds them as `Arc<dyn Port + Send + Sync>` and native
+  `async fn` in traits is **not dyn-compatible** (checked on rustc 1.99.1: error E0038; a method
+  returning `Pin<Box<dyn Future + Send>>` compiles behind `Arc<dyn …>`). Decision A009. Grouped by topic like the web `ChatApp`
   (`Rooms`, `Messages`, `Threads`, `Encryption`, `Session`, `Media`, `SecretStore`,
   `Notifier`, `CallMedia`, `Analytics`). A port returns domain types and `Result<_, DomainError>`.
 - Errors: `thiserror` enums per port; no `anyhow` in libraries; `anyhow` only in `twake-desktop`
@@ -171,7 +181,16 @@ UI action -> use case -> port (async) -> spawned on Tokio -> Task<Result<..>>
   unstable names read under both names. Deviations are decisions (section 14).
 - `SyncService.state()` is always observed; on error it restarts with back-off; the UI shows
   the state. Offline mode is enabled.
-- Sliding sync (MSC4186) only. Never a second `/sync` loop.
+- Sliding sync (MSC4186) only: the SDK's `SyncService` (room-list sync + encryption sync) is the
+  only sync owner. We never add our own `/sync` loop (it would take the to-device messages).
+  Spike S2 checks that the encryption sync does not clash with this rule.
+- **SSO sign-in**: loopback redirect on `127.0.0.1:<random port>` (all 3 OS, no scheme
+  registration), `loginToken` exchanged by `loginWithToken`; `twake://` is for deep links only.
+  Provisional until spike S8 passes against the Twake Synapse.
+- **Multi-account (D373)**: up to 5 accounts, one `AccountSession` per user id, each with its own
+  `Client`, store directory, sync service and keychain entries. The UI shows one; the others run
+  in the background (sync, invitations, notifications, rings). No shared mutable state between
+  sessions; the composition root owns the map.
 - Store: SQLite with a **random 32-byte passphrase kept only in the OS keychain**. The session
   (user id, device id, access token) is also in the keychain; the device id is reused at next
   sign-in so E2EE keys survive.
@@ -249,7 +268,10 @@ Enforced in CI, ratchet style (limits can only tighten; a suppression list can o
 - Tests: `cargo nextest run --workspace` + `cargo test --doc`. TDD at unit level: the failing
   test is written first, from the need (decision/behaviour), never from the implementation.
 - Property tests (`proptest`) for domain (read state, diff application, formatting).
-- Mutation testing (`cargo-mutants`) on `twake-domain` and `twake-app`, changed files only.
+- Project workflow tools run on **changed files only**: `crapper` (every function CRAP < 10),
+  `dryer` (duplication rank < 0.8), `mutator` (survivors killed, dead code deleted). They cover
+  Rust. `cargo-mutants` is the fallback if `mutator` cannot drive a crate.
+- Mutation testing on `twake-domain` and `twake-app` first, then wherever logic lives.
 - Snapshot tests (`insta`) of view models, not pixels.
 - `cargo xtask check-deps`, `cargo deny check`, `cargo audit`.
 - Docs: public items in core crates documented (`missing_docs` warn → deny).
@@ -281,7 +303,30 @@ Enforced in CI, ratchet style (limits can only tighten; a suppression list can o
 | S6 | Tray and native menu next to GPUI's loop (Windows/Linux). | Prototype per OS. |
 | S7 | Inter font licence and bundling. | Licence read; font shipped or fallback chosen. |
 
-Until S1 is decided, `twake-gpui` re-exports `gpui = "0.2.2"` (the version already building in this repo).
+| S8 | SSO loopback against the Twake Synapse (redirect URL allowed by the IdP?). | Sign-in completed on macOS with a loopback port. |
+| S9 | i18n format: read the web `en.json` (plurals, interpolation, ICU?) before fixing Fluent vs generating from the web files. | Decision A006 written with a sample of 20 real strings. |
+
+**S1 gates all `twake-ui-kit` and `twake-ui` work.** GPUI 0.2.2 was published 2025-10-22 and has
+no AccessKit, so the VoiceOver target of section 10 is unreachable on it; a facade re-export
+only swaps the source in one line if the APIs match, which S1 must also verify. Until S1 is
+decided, only the spec, the workspace skeleton, `twake-domain`, `twake-app`, `twake-tokens`,
+`twake-icons` (GPUI-free crates) and the adapters may be built; `twake-gpui` re-exports
+`gpui = "0.2.2"` (what builds today in this repo) and nothing visual beyond the spike lands.
+
+## 13b. Provisional rules
+
+These come from proposals, from the React repo's workflow or from unchecked mechanisms. They
+bind like the rest until a decision changes them, but each is to be confirmed by Clément or
+by a spike:
+
+- Performance budgets (section 8) and PRD NFR-001 to NFR-006 (one set: the PRD numbers govern,
+  section 8 repeats them for convenience).
+- "No plaintext media on disk" (section 9): a product decision with an offline-media cost; the
+  web app has a media cache.
+- `cargo-deny` `[bans] wrappers` as the enforcement of P2 (mechanism unchecked); `xtask
+  check-deps` is the primary check and does not depend on it.
+- Nightly-only E2E and the tag/version rule (inherited from the React repo).
+- Fluent for i18n (A006, after S9).
 
 ## 14. Decisions and change process
 
@@ -289,10 +334,10 @@ Until S1 is decided, `twake-gpui` re-exports `gpui = "0.2.2"` (the version alrea
   risk. Product decisions of the React app keep their `Dnn` and are referenced, not renumbered.
 - A deviation from this file = a new `Axxx` merged first. A decision of the React app
   (`DECISION.md`) that the code here contradicts is **pointed out**, never settled silently.
-- Seed decisions (to be written as `A001`–`A008` in the first commit of the workspace):
+- Seed decisions (to be written as `A001`–`A009` in the first commit of the workspace):
   A001 flat crates + prefix `twake-`; A002 GPUI behind `twake-gpui`; A003 exact-pinned
   matrix-sdk, one adapter; A004 one Tokio runtime, 2–4 workers; A005 keychain-only secrets;
-  A006 Fluent for i18n; A007 tokens/icons generated and GPUI-free; A008 nightly-only E2E.
+  A006 Fluent for i18n; A007 tokens/icons generated and GPUI-free; A008 nightly-only E2E; A009 ports return boxed Send futures (dyn-compatible).
 - Every PR states which sections of this file it touches and, for UI, which inventory ids it ports.
 
 ## 15. Definition of done for a feature

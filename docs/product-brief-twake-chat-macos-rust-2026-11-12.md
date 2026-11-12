@@ -23,7 +23,7 @@ Chat clients wrapped in Electron carry a full browser per app: high memory use, 
 ### Why Now?
 
 - Discord CTO announced on 2026-11-04 a rewrite of its desktop client in Rust on GPUI, with an early build around 290 MB of RAM (single data point, not a shipped benchmark). Sources: ghacks.net 2026-11-06, invenglobal.com article 28182.
-- `gpui` 0.2.2 is on crates.io (2026-10-30) and `matrix-sdk` / `matrix-sdk-ui` 0.19.1 (2026-09-18) cover sliding sync (MSC4186), Rust crypto and SSO login.
+- `gpui` 0.2.2 is on crates.io (published 2025-10-22, so a year old and without AccessKit; Zed `main` has moved on, see ARCHITECTURE.md S1) and `matrix-sdk` / `matrix-sdk-ui` 0.19.1 (2026-09-18) cover sliding sync (MSC4186), Rust crypto and SSO login.
 - Three open-source GPUI Matrix clients exist (Rivet, theGrid, twayblade): the stack is feasible.
 
 ### Impact if Unsolved
