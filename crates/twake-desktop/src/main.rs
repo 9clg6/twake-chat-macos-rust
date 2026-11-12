@@ -4,10 +4,14 @@ use twake_gpui::{
     App, Application, Bounds, Context, IntoElement, Render, TitlebarOptions, Window, WindowBounds,
     WindowOptions, div, prelude::*, px, rgb, size,
 };
-use twake_tokens::THEME;
+use twake_tokens::{LIGHT, Rgba8};
 
 const APP_TITLE: &str = "Twake Chat";
 const WINDOW_SIZE: (f32, f32) = (1100.0, 720.0);
+
+fn packed(color: Rgba8) -> u32 {
+    u32::from(color.r) << 16 | u32::from(color.g) << 8 | u32::from(color.b)
+}
 
 struct Root;
 
@@ -18,8 +22,8 @@ impl Render for Root {
             .size_full()
             .justify_center()
             .items_center()
-            .bg(rgb(THEME.background))
-            .text_color(rgb(THEME.text))
+            .bg(rgb(packed(LIGHT.background.paper)))
+            .text_color(rgb(packed(LIGHT.text.primary)))
             .text_xl()
             .child(APP_TITLE)
     }
