@@ -103,6 +103,114 @@ fn bot_leave() -> BotCommand {
     }
 }
 
+// ------------------------------------------------------------ mentions are not capped on send
+
+/// A composer that knows `n` people `u00..`, named `Person 00..`, and picks each by typing "@uNN".
+fn picking_everyone(n: usize) -> ComposerState {
+    let mut s = state();
+    s.set_sources(Sources {
+        members: (0..n)
+            .map(|i| member(&format!("u{i:02}"), &format!("Person {i:02}")))
+            .collect(),
+        ..Sources::default()
+    });
+    for i in 0..n {
+        let text = format!("{}@u{i:02}", s.text());
+        s.set_text(&text, text.len());
+        pick(&mut s, 0);
+    }
+    s
+}
+
+// FR-054: the 25 is the cap of the suggestion list, not of the send. Red until `extract` stops
+// at 25.
+#[test]
+fn a_message_naming_26_people_mentions_all_26() {
+    let m = sent(picking_everyone(26));
+    assert_eq!(m.mentions.user_ids.len(), 26);
+    assert_eq!(m.notify.user_ids.len(), 26);
+    assert_eq!(m.mentions.user_ids[25], user("u25"));
+}
+
+#[test]
+fn a_message_naming_40_people_links_and_mentions_all_40() {
+    let m = sent(picking_everyone(40));
+    assert_eq!(m.mentions.user_ids.len(), 40);
+    assert_eq!(
+        m.formatted_body
+            .unwrap()
+            .matches("<a href=\"https://matrix.to/")
+            .count(),
+        40
+    );
+}
+
+// ------------------------------------------------------------ a picked name is text, never markup
+
+fn after_picking_the_name(name: &str) -> OutgoingMessage {
+    let mut s = state();
+    s.set_sources(Sources {
+        members: vec![member("eve", name)],
+        ..Sources::default()
+    });
+    s.set_text("hi @eve", 7);
+    pick(&mut s, 0);
+    sent(s)
+}
+
+#[test]
+fn a_name_that_is_html_sends_no_tag() {
+    for name in [
+        "<img src=x onerror=alert(1)>",
+        "\"><script>alert(1)</script>",
+        "<b>Admin</b>",
+    ] {
+        let html = after_picking_the_name(name)
+            .formatted_body
+            .unwrap_or_default();
+        assert!(
+            !html.contains("<img") && !html.contains("<script") && !html.contains("<b>"),
+            "{name}: {html}"
+        );
+    }
+}
+
+// Red until the name written for a mention is kept literal (escaped Markdown) in the HTML.
+#[test]
+fn a_name_with_stars_is_not_bold() {
+    let html = after_picking_the_name("**x**")
+        .formatted_body
+        .unwrap_or_default();
+    assert!(
+        !html.contains("<strong>") && !html.contains("<em>"),
+        "{html}"
+    );
+}
+
+#[test]
+fn a_name_that_is_a_markdown_link_does_not_link_elsewhere() {
+    let html = after_picking_the_name("[x](https://evil.example)")
+        .formatted_body
+        .unwrap_or_default();
+    assert!(!html.contains("evil.example\""), "{html}");
+}
+
+#[test]
+fn a_name_with_an_entity_keeps_it_literal() {
+    let html = after_picking_the_name("&amp;")
+        .formatted_body
+        .unwrap_or_default();
+    assert!(!html.contains(">&amp;<"), "{html}");
+}
+
+#[test]
+fn a_name_with_a_newline_adds_no_tag_but_a_break() {
+    let html = after_picking_the_name("Eve\n<b>Admin</b>")
+        .formatted_body
+        .unwrap_or_default();
+    assert!(!html.contains("<b>"), "{html}");
+}
+
 // ------------------------------------------------------------ the round button (FR-050)
 
 #[test]

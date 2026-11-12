@@ -99,6 +99,8 @@ pub fn match_commands<'a>(commands: &'a [BotCommand], query: &str) -> Vec<&'a Bo
 ### `twake_domain::mention`
 
 ```rust
+/// The cap of a LIST of suggestions (FR-054, React 2e5435c6 "Mention list offers up to 25 people").
+/// It is not a cap on what is sent: `extract` never stops at it.
 pub const MAX_MENTIONS: usize = 25;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -117,7 +119,7 @@ impl Mention {
 pub struct Mentions { pub user_ids: Vec<UserId>, pub room: bool }
 
 /// D487/D401: the picked mentions the text still names (`text.contains(name)`), each user once, in
-/// the order picked, at most MAX_MENTIONS users. Everyone -> `room: true`. A room link (`Room`)
+/// the order picked, with NO cap (the 25 of FR-054 limits the suggestion list only). Everyone -> `room: true`. A room link (`Room`)
 /// notifies nobody (`m.mentions` stays empty for it).
 pub fn extract(text: &str, picked: &[Mention]) -> Mentions;
 

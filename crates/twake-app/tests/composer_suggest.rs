@@ -402,6 +402,26 @@ fn a_bare_at_offers_25_people_at_most() {
     assert_eq!(s.suggestions().len(), 25);
 }
 
+#[test]
+fn a_bare_at_ends_with_everyone_after_the_25_people() {
+    let mut s = composer("@");
+    s.set_sources(Sources {
+        members: (0..40)
+            .map(|i| Member {
+                user_id: user(&format!("u{i:02}")),
+                name: format!("Person {i:02}"),
+                matrix_name: None,
+            })
+            .collect(),
+        can_mention_room: true,
+        ..Sources::default()
+    });
+    let list = s.suggestions();
+    assert_eq!(list.len(), 26);
+    assert_eq!(list[25], Suggestion::Everyone);
+    assert!(matches!(list[24], Suggestion::Person { .. }));
+}
+
 // ------------------------------------------------------------ accept
 
 #[test]

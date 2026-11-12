@@ -4,7 +4,9 @@
 //! Need (not the code): `docs/spec/features/composer.md` and FR-054
 //! - e2e "Composer": "@bo" lists bob; Enter writes "bob " and the sent message renders "bob" as a
 //!   link to `https://matrix.to/#/%40bob%3Alocalhost`; "@@bob:localhost" (a full Matrix id) lists bob.
-//! - FR-054: up to 25 mentions. Commit "Mention list offers up to 25 people".
+//! - FR-054: up to 25 mentions. Commit "Mention list offers up to 25 people" (React 2e5435c6): the
+//!   25 is the cap of the SUGGESTION LIST only. Nothing caps what is sent: every person named in the
+//!   text goes in `m.mentions`.
 //! - D401/D431: "@room" is `m.mentions: { room: true }`, the text keeps "@room" with no link;
 //!   last in a bare "@" list (only when someone is listed), first once "room", "all" or
 //!   "everyone" is started; only for who may notify the room.
@@ -20,8 +22,8 @@
 use proptest::prelude::*;
 use twake_domain::markdown::{OutgoingBody, to_message};
 use twake_domain::mention::{
-    LinkableRoom, MAX_MENTIONS, Member, Mention, MentionCandidate, Mentions, extract, link_names,
-    match_members, match_rooms,
+    LinkableRoom, Member, Mention, MentionCandidate, Mentions, extract, link_names, match_members,
+    match_rooms,
 };
 use twake_domain::search::fold;
 use twake_domain::{RoomAlias, UserId};
@@ -139,17 +141,28 @@ fn a_linked_room_notifies_nobody() {
     );
 }
 
+// Need FR-054: the cap of 25 belongs to the list of suggestions, never to the send. These two
+// tests are red until `extract` stops at MAX_MENTIONS.
 #[test]
-fn at_most_25_people_are_mentioned_the_first_picked() {
-    let picked: Vec<Mention> = (0..30)
+fn a_26th_person_named_is_still_mentioned() {
+    let picked: Vec<Mention> = (0..26)
         .map(|i| Mention::user(user(&format!("u{i:02}")), &format!("n{i:02}x")))
         .collect();
     let text: String = picked.iter().map(|m| format!("{} ", m.name)).collect();
     let got = extract(&text, &picked);
-    assert_eq!(MAX_MENTIONS, 25);
-    assert_eq!(got.user_ids.len(), 25);
-    assert_eq!(got.user_ids[24], user("u24"));
-    assert_eq!(got.user_ids[0], user("u00"));
+    assert_eq!(got.user_ids.len(), 26);
+    assert_eq!(got.user_ids[25], user("u25"));
+}
+
+#[test]
+fn thirty_people_named_are_all_mentioned_in_the_order_picked() {
+    let picked: Vec<Mention> = (0..30)
+        .map(|i| Mention::user(user(&format!("u{i:02}")), &format!("n{i:02}x")))
+        .collect();
+    let text: String = picked.iter().map(|m| format!("{} ", m.name)).collect();
+    let got = extract(&text, &picked).user_ids;
+    let want: Vec<UserId> = (0..30).map(|i| user(&format!("u{i:02}"))).collect();
+    assert_eq!(got, want);
 }
 
 #[test]
@@ -336,7 +349,7 @@ fn nobody_matches_nothing() {
 #[test]
 fn a_bare_at_offers_25_people_not_more() {
     let got = find(&crowd(30), "", false);
-    assert_eq!(got.len(), MAX_MENTIONS);
+    assert_eq!(got.len(), 25);
     assert_eq!(got[0], "Person 00");
     assert_eq!(got[24], "Person 24");
 }
@@ -449,13 +462,13 @@ fn a_bare_hash_offers_at_most_25_rooms() {
 
 proptest! {
     #[test]
-    fn mentions_never_exceed_25_people_and_are_unique(count in 0usize..60) {
+    fn every_distinct_person_named_is_mentioned_once(count in 0usize..60) {
         let picked: Vec<Mention> = (0..count)
             .map(|i| Mention::user(user(&format!("u{}", i % 40)), &format!("name{} ", i % 40)))
             .collect();
         let text: String = picked.iter().map(|m| m.name.clone()).collect();
         let got = extract(&text, &picked).user_ids;
-        prop_assert!(got.len() <= MAX_MENTIONS);
+        prop_assert_eq!(got.len(), count.min(40));
         let mut seen = got.clone();
         seen.sort_by(|a, b| a.as_str().cmp(b.as_str()));
         seen.dedup();
@@ -479,7 +492,7 @@ proptest! {
         let mut members = crowd(count);
         members.push(member("me", "Person me"));
         let got = match_members(&members, &query, &user("me"), true);
-        prop_assert!(got.len() <= MAX_MENTIONS + 1);
+        prop_assert!(got.len() <= 26);
         prop_assert!(!got.iter().any(|c| matches!(c, MentionCandidate::Person(m) if m.user_id == user("me"))));
     }
 }
