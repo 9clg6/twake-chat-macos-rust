@@ -12,6 +12,7 @@ workspace = true
 twake-domain = { path = "../twake-domain" }
 futures = "0.3"
 thiserror = "2.0.21"
+url = "2"
 
 [dev-dependencies]
 proptest = "1"

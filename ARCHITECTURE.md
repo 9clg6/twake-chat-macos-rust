@@ -70,7 +70,7 @@ Arrow = "MAY depend on". An internal edge not listed is forbidden.
 
 | Crate | Responsibility | May depend on |
 |---|---|---|
-| `twake-domain` | Ids, `RoomSummary`, `MessageVm`, read state, power levels, search query, errors. Pure. | std, `serde`, `thiserror`, `imbl` |
+| `twake-domain` | Ids, `RoomSummary`, `MessageVm`, read state, power levels, search query, errors. Pure. | std, `serde`, `serde_json`, `url`, `unicode-normalization`, `thiserror`, `imbl` |
 | `twake-app` | Use cases grouped as the web `ChatApp` (`rooms`, `messages`, `threads`, `encryption`, `calls`…) and the **port traits**. | `twake-domain` |
 | `twake-matrix` | Adapter over `matrix-sdk` / `matrix-sdk-ui`: sync, room list, timeline, crypto, SQLite store, SSO login. Produces domain snapshots and diffs. | `twake-app`, `twake-domain`, `matrix-sdk*`, `tokio` |
 | `twake-services` | HTTP adapters: ToM, side service (assistants, suggestions, analytics), Meet REST, GIF proxy. | `twake-app`, `twake-domain`, `reqwest` (rustls) |
@@ -120,7 +120,7 @@ Hard rules (checked by `cargo xtask check-deps` in CI, plus `cargo-deny` `[bans]
   explicit `BoxFuture`), because the UI holds them as `Arc<dyn Port + Send + Sync>` and native
   `async fn` in traits is **not dyn-compatible** (checked on rustc 1.99.1: error E0038; a method
   returning `Pin<Box<dyn Future + Send>>` compiles behind `Arc<dyn …>`). Decision A009. Grouped by topic like the web `ChatApp`
-  (`Rooms`, `Messages`, `Threads`, `Encryption`, `Session`, `Media`, `SecretStore`,
+  (`Rooms`, `Messages`, `Threads`, `Encryption`, `Session`, `SessionStorePort` (stored sessions, up to 5 accounts), `Media`, `SecretStore`,
   `Notifier`, `CallMedia`, `Analytics`). A port returns domain types and `Result<_, DomainError>`.
 - Errors: `thiserror` enums per port; no `anyhow` in libraries; `anyhow` only in `twake-desktop`
   and `xtask`. No `unwrap`/`expect`/`panic!` in non-test code of any crate except

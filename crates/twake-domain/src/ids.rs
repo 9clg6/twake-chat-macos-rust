@@ -49,7 +49,7 @@ fn body(s: &str, sigil: char) -> Result<&str, IdError> {
 }
 
 /// The part before the server name: not empty, no whitespace, no control character.
-fn check_opaque(opaque: &str) -> Result<(), IdError> {
+pub(crate) fn check_opaque(opaque: &str) -> Result<(), IdError> {
     if opaque.is_empty() {
         Err(IdError::Empty)
     } else if opaque.chars().any(|c| c.is_whitespace() || c.is_control()) {

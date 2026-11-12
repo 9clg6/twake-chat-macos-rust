@@ -20,10 +20,12 @@ use twake_domain::room_list::{RoomKind, RoomListDiff, RoomSummary};
 use twake_domain::timeline::{Message, SendState, TimelineDiff};
 use twake_domain::{EventId, RoomId, Timestamp, UserId};
 
+pub use crate::session_store_contract::session_store;
+
 /// The outcome of a suite: `Ok(())`, or the first rule that does not hold.
 pub type Verdict = Result<(), String>;
 
-fn same<T: PartialEq + Debug>(rule: &str, got: T, want: T) -> Verdict {
+pub(crate) fn same<T: PartialEq + Debug>(rule: &str, got: T, want: T) -> Verdict {
     if got == want {
         Ok(())
     } else {
@@ -31,7 +33,7 @@ fn same<T: PartialEq + Debug>(rule: &str, got: T, want: T) -> Verdict {
     }
 }
 
-fn holds(rule: &str, condition: bool) -> Verdict {
+pub(crate) fn holds(rule: &str, condition: bool) -> Verdict {
     if condition {
         Ok(())
     } else {
