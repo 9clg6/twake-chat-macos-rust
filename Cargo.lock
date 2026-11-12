@@ -5655,10 +5655,134 @@ dependencies = [
 ]
 
 [[package]]
-name = "twake-chat"
+name = "twake-app"
+version = "0.1.0"
+dependencies = [
+ "twake-domain",
+]
+
+[[package]]
+name = "twake-calls"
+version = "0.1.0"
+dependencies = [
+ "twake-app",
+ "twake-domain",
+]
+
+[[package]]
+name = "twake-desktop"
+version = "0.1.0"
+dependencies = [
+ "tokio",
+ "twake-app",
+ "twake-calls",
+ "twake-domain",
+ "twake-gpui",
+ "twake-i18n",
+ "twake-icons",
+ "twake-matrix",
+ "twake-media",
+ "twake-platform",
+ "twake-services",
+ "twake-store",
+ "twake-tokens",
+ "twake-ui",
+ "twake-ui-kit",
+]
+
+[[package]]
+name = "twake-domain"
+version = "0.1.0"
+
+[[package]]
+name = "twake-gpui"
 version = "0.1.0"
 dependencies = [
  "gpui",
+]
+
+[[package]]
+name = "twake-i18n"
+version = "0.1.0"
+dependencies = [
+ "twake-domain",
+]
+
+[[package]]
+name = "twake-icons"
+version = "0.1.0"
+
+[[package]]
+name = "twake-matrix"
+version = "0.1.0"
+dependencies = [
+ "twake-app",
+ "twake-domain",
+]
+
+[[package]]
+name = "twake-media"
+version = "0.1.0"
+dependencies = [
+ "twake-app",
+ "twake-domain",
+]
+
+[[package]]
+name = "twake-platform"
+version = "0.1.0"
+dependencies = [
+ "twake-app",
+ "twake-domain",
+]
+
+[[package]]
+name = "twake-services"
+version = "0.1.0"
+dependencies = [
+ "twake-app",
+ "twake-domain",
+]
+
+[[package]]
+name = "twake-store"
+version = "0.1.0"
+dependencies = [
+ "twake-app",
+ "twake-domain",
+]
+
+[[package]]
+name = "twake-testing"
+version = "0.1.0"
+dependencies = [
+ "twake-app",
+ "twake-domain",
+]
+
+[[package]]
+name = "twake-tokens"
+version = "0.1.0"
+
+[[package]]
+name = "twake-ui"
+version = "0.1.0"
+dependencies = [
+ "twake-app",
+ "twake-domain",
+ "twake-gpui",
+ "twake-i18n",
+ "twake-ui-kit",
+]
+
+[[package]]
+name = "twake-ui-kit"
+version = "0.1.0"
+dependencies = [
+ "twake-domain",
+ "twake-gpui",
+ "twake-icons",
+ "twake-tokens",
 ]
 
 [[package]]
@@ -6788,6 +6912,10 @@ name = "xmlwriter"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
+
+[[package]]
+name = "xtask"
+version = "0.1.0"
 
 [[package]]
 name = "y4m"
