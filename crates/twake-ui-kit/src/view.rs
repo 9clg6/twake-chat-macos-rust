@@ -5,7 +5,7 @@ use std::borrow::Cow;
 
 mod text_element;
 mod text_input;
-mod text_keys;
+pub mod text_keys;
 mod text_layout;
 
 pub use text_input::{Submit, TextInput};

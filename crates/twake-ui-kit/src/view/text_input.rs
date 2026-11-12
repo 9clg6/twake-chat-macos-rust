@@ -14,7 +14,7 @@ use twake_gpui::{
 
 use super::hsla;
 use super::text_element::TextElement;
-use super::text_keys::{Command, command};
+use super::text_keys::{Command, command, edit};
 use super::text_layout::Laid;
 use crate::button::{ButtonColor, ButtonSize, ButtonState, ButtonStyle, ButtonVariant};
 use crate::text_buffer::{Delete, Move, TextBuffer};
@@ -144,19 +144,11 @@ impl TextInput {
         cx.stop_propagation();
         match command {
             Command::Move(to, extend) => self.move_caret(to, extend),
-            Command::Delete(kind) => self.buffer.delete(kind),
-            Command::Newline => self.buffer.insert("\n"),
             Command::Submit => cx.emit(Submit),
-            Command::SelectAll => self.buffer.select_all(),
             Command::Copy => self.copy(cx),
             Command::Cut => self.cut(cx),
             Command::Paste => self.paste(cx),
-            Command::Undo => {
-                self.buffer.undo();
-            }
-            Command::Redo => {
-                self.buffer.redo();
-            }
+            other => edit(&mut self.buffer, other),
         }
         self.changed(cx);
     }
