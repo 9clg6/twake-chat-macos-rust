@@ -50,7 +50,12 @@ fn a_common_language_wins_over_a_local_one_and_locks_the_picker() {
 
 #[test]
 fn a_region_or_case_does_not_matter() {
-    for (given, want) in [("fr-FR", "fr"), ("en-US", "en"), ("DE", "de"), ("vi_VN", "vi")] {
+    for (given, want) in [
+        ("fr-FR", "fr"),
+        ("en-US", "en"),
+        ("DE", "de"),
+        ("vi_VN", "vi"),
+    ] {
         let e = env(false, Some(spoken(Some(given), None)));
         assert_eq!(local_language("it").view(&e).language, want, "{given}");
     }
