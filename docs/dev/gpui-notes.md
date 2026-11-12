@@ -23,3 +23,20 @@ Seen while building `twake-ui-kit::view` and `twake-desktop --gallery` (2026-11-
 - **No letter spacing** in `TextStyle` of 0.2.2: `font.letter_spacing` of `ResolvedButton` is not applied.
 - `cx.window_appearance()` gives the OS theme (`Dark | VibrantDark` is dark); used for `Theme::system`.
 - Not checked: click handler, the light/dark button, hover and ring on screen (no pointer driven in this run).
+
+## `--preview` (room list and conversation on fixtures), seen 2026-11-12, macOS, gpui 0.2.2
+
+- **`cx.new` needs `AppContext` in scope** (`use twake_gpui::AppContext`), even on `Context<V>`.
+- **`flex_1()` in a column is a height rule** (`flex: 1 1 0%`): a title `div` with `flex_1().min_w_0()` inside a `flex_col`
+  got height 0 and drew only the ellipsis ("..."). A `text_ellipsis` child of a column needs neither.
+- **No window id from GPUI**: capture with `screencapture -l <CGWindowID>` (id read through `CGWindowListCopyWindowInfo`),
+  not a full-screen capture, which also grabs whatever is on the desktop.
+- **Selected row**: `primary.light` is a pale blue; with the light text of the dark scheme it is unreadable, so the dark
+  scheme uses `primary.dark`.
+- Seen on screen and still wrong: the footer of a bubble of 5 lines is clipped by one line (the slot height is an estimate,
+  `overflow_hidden` cuts the rest); the `JT` avatar (grey 600) has no visible disc on the dark background.
+- **Bench** (`TWAKE_PREVIEW_BENCH=1 twake-desktop --preview`, 600 frames scrolling 10 043 rows, window on screen):
+  - release: frame ms p50 4.2, p95 4.9, p99 6.8 to 8.4, max 114.7 to 122.6, 2 frames over 25 ms; row build ms p50 0.02, max 0.07 (2 runs).
+  - debug: frame ms p50 4.2, p95 5.1, p99 13.8, max 452.0, 2 frames over 25 ms; row build p50 0.05, max 0.13.
+  - The 2 slow frames are at the start (first paint, glyph cache); the p50 is the display cadence, not a CPU cost.
+- The preview datasets are written by hand in `preview_data.rs`; `twake-testing` stays a dev-dependency (A011 Q4).

@@ -9,7 +9,7 @@ use twake_gpui::{
     StatefulInteractiveElement, Styled, Svg, Window, div, point, px, svg,
 };
 use twake_icons::by_id;
-use twake_tokens::{LineHeight, Rgba8};
+use twake_tokens::{ERROR, GREY, INFO, LineHeight, PRIMARY, Rgba8, SECONDARY, SUCCESS, WARNING};
 
 use crate::button::{
     ButtonColor, ButtonSize, ButtonState, ButtonStyle, ButtonVariant, ResolvedButton,
@@ -22,8 +22,30 @@ type ClickListener = Box<dyn Fn(&ClickEvent, &mut Window, &mut App) + 'static>;
 
 const ICON_DIR: &str = "icons/";
 
-fn hsla(color: Rgba8) -> Hsla {
+/// A token colour as a GPUI colour.
+pub fn hsla(color: Rgba8) -> Hsla {
     to_gpui_rgba(color).into()
+}
+
+/// Backgrounds of the avatars: 11 shades of the palettes, white text on each.
+// ponytail: stands for the 11 `supportedColors` of twake-mui, which `tokens.json` does not export yet.
+const AVATAR_COLORS: [Rgba8; 11] = [
+    PRIMARY.shades[6],
+    PRIMARY.shades[8],
+    SECONDARY.shades[6],
+    ERROR.shades[6],
+    ERROR.shades[8],
+    WARNING.shades[8],
+    SUCCESS.shades[8],
+    SUCCESS.shades[6],
+    INFO.shades[8],
+    GREY.shades[6],
+    GREY.shades[8],
+];
+
+/// The background of the avatar of this palette index.
+pub fn avatar_background(index: usize) -> Hsla {
+    hsla(AVATAR_COLORS[index % AVATAR_COLORS.len()])
 }
 
 /// Serves `icons/<id>.svg` from `twake-icons`: GPUI 0.2.2 loads an SVG only by asset path.

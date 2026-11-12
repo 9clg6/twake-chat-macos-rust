@@ -1,6 +1,7 @@
 //! Composition root: builds the runtime, wires the adapters and opens the main window.
 
 use gallery::Gallery;
+use preview::Preview;
 use twake_gpui::{
     App, Application, Bounds, Context, IntoElement, Render, TitlebarOptions, Window,
     WindowAppearance, WindowBounds, WindowOptions, div, prelude::*, px, rgb, size,
@@ -9,6 +10,8 @@ use twake_tokens::{LIGHT, Rgba8};
 use twake_ui_kit::view::IconAssets;
 
 mod gallery;
+mod preview;
+mod preview_data;
 
 const APP_TITLE: &str = "Twake Chat";
 const WINDOW_SIZE: (f32, f32) = (1100.0, 720.0);
@@ -37,6 +40,8 @@ impl Render for Root {
 #[allow(clippy::expect_used)]
 fn main() {
     let gallery = std::env::args().any(|arg| arg == "--gallery");
+    let preview = std::env::args().any(|arg| arg == "--preview");
+    let bench = std::env::var_os("TWAKE_PREVIEW_BENCH").is_some();
     Application::new()
         .with_assets(IconAssets)
         .run(move |cx: &mut App| {
@@ -49,13 +54,16 @@ fn main() {
                 }),
                 ..Default::default()
             };
+            let dark = matches!(
+                cx.window_appearance(),
+                WindowAppearance::Dark | WindowAppearance::VibrantDark
+            );
             if gallery {
-                let dark = matches!(
-                    cx.window_appearance(),
-                    WindowAppearance::Dark | WindowAppearance::VibrantDark
-                );
                 cx.open_window(options, |_, cx| cx.new(|_| Gallery::new(dark)))
                     .expect("open the gallery window");
+            } else if preview {
+                cx.open_window(options, |_, cx| cx.new(|cx| Preview::new(dark, bench, cx)))
+                    .expect("open the preview window");
             } else {
                 cx.open_window(options, |_, cx| cx.new(|_| Root))
                     .expect("open the main window");

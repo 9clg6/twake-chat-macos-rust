@@ -9,4 +9,6 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+fluent-bundle = "0.16.0"
 twake-domain = { path = "../twake-domain" }
+unic-langid = "0.9.6"
