@@ -77,10 +77,11 @@ pub struct SystemEnv {
     pub common: Option<CommonSettings>, // common settings of ToM (D38), None = none known
 }
 
-/// `user_info` of ToM, read only. The language (D67) is NOT modelled yet.
+/// `user_info` of ToM, read only: theme and language, nothing else (D38, D67).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CommonSettings {
     pub theme: Option<CommonTheme>,  // None = the user chose nothing there
+    pub language: Option<String>,    // as ToM keeps it ("fr-FR"); None = the user chose none
     pub url: Option<String>,         // page where they change, already `common_settings_url`-resolved
 }
 #[derive(Debug, Clone, Copy, PartialEq, Eq)] pub enum CommonTheme { Light, Dark, Auto }
@@ -122,7 +123,9 @@ pub struct ViewSettings {
     pub do_not_disturb: bool,
     /// A common theme (D38) is in place: the choices of Appearance are disabled.
     pub appearance_locked: bool,
-    /// Link to the common settings: Some only while `appearance_locked` and `common.url` is Some.
+    /// A supported common language is in place: the language picker is disabled (D67).
+    pub language_locked: bool,
+    /// Link to the common settings: Some only while `appearance_locked` or `language_locked`, and `common.url` is Some.
     pub common_settings_url: Option<String>,
 }
 
@@ -262,13 +265,19 @@ impl SettingsState {
 Rulings of the owner, applied above: "All" is firm; muted is "None" only; two account defaults
 (`direct_messages`, `groups`, values All|Mentions as in React); the common theme wins (D38).
 
+Common settings read by the React app: `user_info.theme` and `user_info.language`, nothing else;
+the well-known `app.twake.chat.common_settings` gives `enabled` and `application_url` (the link).
+
+Common language (D67, `useSharedLanguage`): the first two letters of `CommonSettings.language`,
+lower-cased ("fr-FR" and "fra" are "fr"); if that is in `SUPPORTED_LANGUAGES` it wins over the
+local choice and over the OS language, `ViewSettings.language_locked` is true and `language` is
+it; otherwise ("ja-JP", "", one letter, None) it counts as none and nothing is locked. The local
+`Preferences.language` is never touched, so it is back when the common one goes. ToM unreachable
+keeps it (`with_common_fetch`). The link shows while either lock is on.
+
+A key `direct_messages` / `groups` that is there decides, valid or not (an invalid value is the
+default of that field); only a missing one follows the former `notifications` key.
+
 Open:
-- Common settings other than the theme. In the React code (`TomUserSettings.fetchSettings`,
-  `SharedSettings`) `user_info` gives `theme` (light|dark|auto) and `language` (D67: wins over the
-  device choice, `fr-FR` is French, an unsupported one counts as none, set aside and restored,
-  read for anyone). The well-known `app.twake.chat.common_settings` gives `enabled` and
-  `application_url` (the link). Nothing else is read. The language is not modelled here yet:
-  a `CommonSettings.language` would lock the picker the same way.
-- A `direct_messages`/`groups` that is invalid while the former `notifications` key is present
-  takes the former value (not the default); no test pins it.
+- Push-rule switches (D85), bubble style, "reduced motion" as a setting: not in this slice.
 - Push-rule switches (D85), bubble style, "reduced motion" as a setting: not in this slice.

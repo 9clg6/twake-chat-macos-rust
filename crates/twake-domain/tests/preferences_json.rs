@@ -406,6 +406,26 @@ fn a_level_of_its_own_wins_over_the_former_single_level() {
 }
 
 #[test]
+fn an_invalid_level_takes_its_default_even_when_the_former_key_is_there() {
+    let p = read(json!({
+        "version": 2,
+        "notifications": "mentions",
+        "direct_messages": "none",
+        "groups": 3
+    }));
+    assert_eq!(p.direct_messages, GlobalNotificationLevel::All);
+    assert_eq!(p.groups, GlobalNotificationLevel::All);
+    let p = read(json!({
+        "version": 2,
+        "notifications": "mentions",
+        "direct_messages": "mentions",
+        "groups": "none"
+    }));
+    assert_eq!(p.direct_messages, GlobalNotificationLevel::Mentions);
+    assert_eq!(p.groups, GlobalNotificationLevel::All);
+}
+
+#[test]
 fn an_invalid_former_single_level_gives_the_defaults() {
     let p = read(json!({"version": 2, "notifications": "none"}));
     assert_eq!(p.direct_messages, GlobalNotificationLevel::All);

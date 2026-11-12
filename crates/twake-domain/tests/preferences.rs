@@ -217,6 +217,7 @@ fn the_view_carries_every_choice_of_the_user() {
             bubble_align: BubbleAlign::Left,
             do_not_disturb: true,
             appearance_locked: false,
+            language_locked: false,
             common_settings_url: None,
         }
     );

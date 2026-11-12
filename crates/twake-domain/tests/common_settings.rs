@@ -12,15 +12,126 @@
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
 
 use twake_domain::preferences::{
-    ColorScheme, CommonFetch, CommonSettings, CommonTheme, Preferences, SystemEnv, ThemeChoice,
-    common_settings_url,
+    ColorScheme, CommonFetch, CommonSettings, CommonTheme, Language, Preferences, SystemEnv,
+    ThemeChoice, common_settings_url,
 };
 
 fn common(theme: Option<CommonTheme>, url: Option<&str>) -> CommonSettings {
     CommonSettings {
         theme,
+        language: None,
         url: url.map(String::from),
     }
+}
+
+fn spoken(language: Option<&str>, url: Option<&str>) -> CommonSettings {
+    CommonSettings {
+        language: language.map(String::from),
+        ..common(None, url)
+    }
+}
+
+fn local_language(code: &'static str) -> Preferences {
+    Preferences {
+        language: Language::Code(code),
+        ..Preferences::default()
+    }
+}
+
+// ---------------------------------------------------------------- the common language (D67)
+
+#[test]
+fn a_common_language_wins_over_a_local_one_and_locks_the_picker() {
+    let e = env(false, Some(spoken(Some("fr"), None)));
+    let v = local_language("de").view(&e);
+    assert_eq!(v.language, "fr");
+    assert!(v.language_locked);
+}
+
+#[test]
+fn a_region_or_case_does_not_matter() {
+    for (given, want) in [("fr-FR", "fr"), ("en-US", "en"), ("DE", "de"), ("vi_VN", "vi")] {
+        let e = env(false, Some(spoken(Some(given), None)));
+        assert_eq!(local_language("it").view(&e).language, want, "{given}");
+    }
+}
+
+#[test]
+fn a_language_the_app_lacks_counts_as_none() {
+    for given in ["ja-JP", "pt-BR", "xx", "", "f"] {
+        let e = env(false, Some(spoken(Some(given), Some(PAGE))));
+        let v = local_language("de").view(&e);
+        assert_eq!(v.language, "de", "{given:?}");
+        assert!(!v.language_locked, "{given:?}");
+        assert_eq!(v.common_settings_url, None, "{given:?}");
+    }
+}
+
+#[test]
+fn the_first_two_letters_decide_as_in_the_react_app() {
+    let e = env(false, Some(spoken(Some("fra"), None)));
+    assert_eq!(local_language("de").view(&e).language, "fr");
+}
+
+#[test]
+fn a_common_settings_without_a_language_leave_the_local_one() {
+    let e = env(false, Some(common(Some(CommonTheme::Dark), None)));
+    let v = local_language("de").view(&e);
+    assert_eq!(v.language, "de");
+    assert!(!v.language_locked);
+}
+
+#[test]
+fn the_common_language_beats_the_system_one_too() {
+    let e = SystemEnv {
+        language: "de-DE".into(),
+        common: Some(spoken(Some("es"), None)),
+        ..SystemEnv::default()
+    };
+    assert_eq!(Preferences::default().view(&e).language, "es");
+}
+
+#[test]
+fn the_language_and_the_theme_lock_on_their_own() {
+    let only_language = env(false, Some(spoken(Some("fr"), None)));
+    let v = Preferences::default().view(&only_language);
+    assert!(v.language_locked && !v.appearance_locked);
+    let only_theme = env(false, Some(common(Some(CommonTheme::Dark), None)));
+    let v = Preferences::default().view(&only_theme);
+    assert!(v.appearance_locked && !v.language_locked);
+}
+
+#[test]
+fn the_link_shows_while_the_language_alone_is_locked() {
+    let e = env(false, Some(spoken(Some("fr"), Some(PAGE))));
+    assert_eq!(
+        Preferences::default().view(&e).common_settings_url,
+        Some(PAGE.to_string())
+    );
+}
+
+#[test]
+fn the_local_language_is_not_overwritten_and_comes_back() {
+    let prefs = local_language("de");
+    let held = env(false, Some(spoken(Some("fr"), None)));
+    assert_eq!(prefs.view(&held).language, "fr");
+    assert_eq!(prefs.language, Language::Code("de"));
+    assert_eq!(prefs.view(&env(false, None)).language, "de");
+}
+
+#[test]
+fn tom_unreachable_keeps_the_common_language_in_place() {
+    let before = env(false, Some(spoken(Some("fr"), None)));
+    let after = before.clone().with_common_fetch(CommonFetch::Unreachable);
+    assert_eq!(after, before);
+    assert_eq!(local_language("de").view(&after).language, "fr");
+}
+
+#[test]
+fn an_answer_without_a_language_unlocks_it() {
+    let before = env(false, Some(spoken(Some("fr"), None)));
+    let after = before.with_common_fetch(CommonFetch::Reached(None));
+    assert_eq!(local_language("de").view(&after).language, "de");
 }
 
 fn env(dark: bool, common: Option<CommonSettings>) -> SystemEnv {

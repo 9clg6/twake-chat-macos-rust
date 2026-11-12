@@ -270,10 +270,35 @@ fn common(theme: CommonTheme) -> SystemEnv {
     SystemEnv {
         common: Some(CommonSettings {
             theme: Some(theme),
+            language: None,
             url: None,
         }),
         ..SystemEnv::default()
     }
+}
+
+fn common_language(language: &str) -> SystemEnv {
+    SystemEnv {
+        common: Some(CommonSettings {
+            theme: None,
+            language: Some(language.to_string()),
+            url: None,
+        }),
+        ..SystemEnv::default()
+    }
+}
+
+#[test]
+fn a_language_picked_while_the_common_language_wins_is_kept_and_comes_back() {
+    let mut s = fresh();
+    s.set_language(Language::Code("de"));
+    let held = common_language("fr-FR");
+    assert_eq!(s.view(&held).language, "fr");
+    assert!(s.view(&held).language_locked);
+    assert_eq!(s.preferences().language, Language::Code("de"));
+    let gone = SystemEnv::default();
+    assert_eq!(s.view(&gone).language, "de");
+    assert!(!s.view(&gone).language_locked);
 }
 
 #[test]
