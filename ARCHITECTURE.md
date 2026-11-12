@@ -90,10 +90,10 @@ Arrow = "MAY depend on". An internal edge not listed is forbidden.
 
 Hard rules (checked by `cargo xtask check-deps` in CI, plus `cargo-deny` `[bans]` wrappers):
 
-1. `twake-domain` and `twake-app` MUST NOT depend on an adapter, on GPUI, or on a Tokio runtime
-   (only `futures` and `tokio::sync` types).
+1. `twake-domain` and `twake-app` MUST NOT depend on an adapter, on GPUI, or on `tokio` at all
+   (only `futures`; decision A011/Q6).
 2. `twake-ui*` MUST NOT depend on an adapter crate. Only `twake-desktop` imports adapters.
-3. `twake-tokens` and `twake-icons` MUST stay GPUI-free and dependency-free so another Twake
+3. `twake-tokens` and `twake-icons` MUST stay GPUI-free and free of dependencies (optional `serde` feature only; A011/Q7) so another Twake
    Rust app (or UI toolkit) can reuse them.
 4. No dependency cycles; ports live in `twake-app` so cycles cannot form.
 5. `unsafe` is forbidden everywhere except `twake-platform` (section 9).
