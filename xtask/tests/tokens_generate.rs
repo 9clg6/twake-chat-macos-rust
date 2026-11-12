@@ -202,6 +202,32 @@ fn rgba_colours_become_bytes_with_the_alpha_rounded() {
     assert!(text.contains("Rgba8::new(0,0,0,255)"), "alpha 1 -> 255");
 }
 
+fn distinct_channels() -> String {
+    let light = scheme("#abc", "rgb(1, 2, 3)", "rgba(1, 2, 3, 0.5)");
+    json(&format!(
+        "\"paletteRaw\":{},\"schemes\":{{\"light\":{light}}}",
+        raw(false)
+    ))
+}
+
+#[test]
+fn a_shorthand_hex_keeps_each_channel_in_its_place() {
+    let text = out(&distinct_channels()).unwrap_or_default();
+    assert!(text.contains("Rgba8::new(170,187,204,255)"));
+}
+
+#[test]
+fn an_rgb_colour_keeps_each_channel_in_its_place() {
+    let text = out(&distinct_channels()).unwrap_or_default();
+    assert!(text.contains("Rgba8::new(1,2,3,255)"));
+}
+
+#[test]
+fn an_rgba_colour_keeps_each_channel_and_rounds_the_alpha() {
+    let text = out(&distinct_channels()).unwrap_or_default();
+    assert!(text.contains("Rgba8::new(1,2,3,128)"), "0.5 -> 128");
+}
+
 #[test]
 fn a_json_without_schemes_still_generates_the_palettes() {
     let text = out(&base()).unwrap_or_default();
