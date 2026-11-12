@@ -68,3 +68,9 @@ merged before the code that needs it. Product decisions of the React app keep th
 - Decision: (Q4) `twake-desktop` has no normal dependency on `twake-testing` for now, so `--preview` on fakes waits for a decision. (Q5) `twake-tokens` and `twake-icons` may carry `serde` behind an optional feature; the graph check reads `cargo metadata` without features, so it lets `serde` through on those two and nothing else. (Q6) `twake-domain` and `twake-app` depend on no `tokio*` crate, dev-dependencies included; they use `futures` only. (Q7) Dev-dependencies are not counted against rule 3; they follow the edge table and P2.
 - Consequences: ARCHITECTURE.md rule 1 ("`tokio::sync` types") is stricter in the check than in the text; the text is read as superseded by this note.
 - Risk: a core crate that needs `tokio::sync` must change this decision first.
+
+## A012 Token generator: dependencies and spellings
+- Context: `cargo xtask tokens` turns `docs/spec/tokens.json` into `twake-tokens/src/generated.rs`; the tests were written before the code.
+- Decision: `serde_json` is a dev-dependency of `twake-tokens` (its tests read `tokens.json`; dev-dependencies do not count against rule 3, A011 Q7) and a normal dependency of `xtask` (a build tool, not a product crate). A shade is read with `PRIMARY.shade(600)`, not `PRIMARY[600]` (a lookup that can fail, `None` for any other number). The command takes `--input FILE` and `--output FILE` besides `--check`, for tests and for other token files.
+- Consequences: `twake-tokens` stays dependency-free; `generated.rs` is committed and CI runs `cargo xtask tokens --check`; the placeholder `THEME` is gone, `twake-desktop` reads `LIGHT`.
+- Risk: none beyond a stale `generated.rs`, which `--check` catches.
