@@ -4,6 +4,21 @@ all-features = true
 [advisories]
 version = 2
 yanked = "deny"
+# Only informational "unmaintained" advisories are ignored, one by id, all via gpui 0.2.2.
+# A vulnerability is never ignored. Review every entry at each gpui bump (A018).
+ignore = [
+  { id = "RUSTSEC-2024-0384", reason = "unmaintained, transitive only: instant 0.1.13 <- fastrand 1.9 <- futures-lite 1.13 <- gpui_util / gpui_http_client <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2024-0436", reason = "unmaintained, transitive only: paste 1.0.15 <- metal 0.29 <- core-video / gpui <- gpui 0.2.2 (macOS rendering); reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2025-0052", reason = "unmaintained, transitive only: async-std 1.13.2 <- zed-async-tar <- gpui_http_client <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2025-0134", reason = "unmaintained, transitive only: rustls-pemfile 2.2.0 <- zed-reqwest <- gpui_http_client <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2026-0173", reason = "unmaintained, transitive only: proc-macro-error2 2.0.1 <- stacksafe-macro <- stacksafe <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2026-0192", reason = "unmaintained, transitive only: ttf-parser 0.20/0.21/0.25 <- fontdb, rustybuzz <- cosmic-text 0.14 and usvg/resvg 0.45 <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2026-0206", reason = "unmaintained, transitive only: rustybuzz 0.14.1 <- cosmic-text 0.14 <- gpui 0.2.2; rustybuzz 0.20.1 <- usvg 0.45 <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2026-0370", reason = "unmaintained, transitive only: zvariant 5.15 <- zbus 5.19 / zbus_macros <- ashpd, oo7 <- gpui 0.2.2 (Linux portals); reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2026-0371", reason = "unmaintained, transitive only: zbus_names 4.3 <- zbus 5.19 <- ashpd, oo7 <- gpui 0.2.2 (Linux portals); reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2026-0372", reason = "unmaintained, transitive only: zvariant_derive 5.15 <- zvariant <- zbus <- ashpd, oo7 <- gpui 0.2.2 (Linux portals); reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2026-0441", reason = "unmaintained, transitive only: pin-utils 0.1.1 <- async-std <- zed-async-tar <- gpui_http_client <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
+]
 
 [licenses]
 version = 2
@@ -22,10 +37,19 @@ allow = [
   "BSL-1.0",
 ]
 confidence-threshold = 0.9
+# libfuzzer-sys is "(MIT OR Apache-2.0) AND NCSA" (permissive, MIT-like); only it needs NCSA.
+# libfuzzer-sys <- rav1e <- ravif <- image <- gpui 0.2.2. Reviewed 2026-11-12 (A018).
+exceptions = [{ allow = ["NCSA"], crate = "libfuzzer-sys" }]
+
+[licenses.private]
+# Workspace crates are `publish = false` and carry no licence field: none is chosen yet.
+ignore = true
 
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# `path` dependencies between workspace crates have no version.
+allow-wildcard-paths = true
 # P2 (one external system, one crate) is enforced by `cargo xtask check-deps`;
 # `wrappers` entries are added with the first crate that needs them.
 
