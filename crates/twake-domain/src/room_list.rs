@@ -4,9 +4,8 @@
 
 use std::cmp::Reverse;
 
-use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
-
 use crate::read_state::UnreadCount;
+use crate::search::fold;
 use crate::{MxcUri, RoomId, Timestamp};
 
 /// What a room is.
@@ -184,14 +183,6 @@ impl RoomFilter {
             Self::Favourites => room.is_favourite,
         }
     }
-}
-
-/// Lower case, no accent (D392).
-fn fold(s: &str) -> String {
-    s.nfd()
-        .filter(|c| !is_combining_mark(*c))
-        .flat_map(char::to_lowercase)
-        .collect()
 }
 
 /// `word` sits in `name` between two word boundaries.
