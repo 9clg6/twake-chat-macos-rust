@@ -226,7 +226,11 @@ pub fn common_settings_url(template: &str, user_id: &str) -> Option<String> {
     if username.is_empty() || !template.contains("{username}") {
         return None;
     }
-    let url = template.replace("{username}", &encode(username));
+    normalize(&template.replace("{username}", &encode(username)))
+}
+
+/// `URL.href` of an http(s) URL: scheme and host in lower case, `/` for an empty path.
+fn normalize(url: &str) -> Option<String> {
     let (scheme, rest) = url.split_once("://")?;
     let scheme = scheme.to_lowercase();
     if scheme != "http" && scheme != "https" {
@@ -237,12 +241,8 @@ pub fn common_settings_url(template: &str, user_id: &str) -> Option<String> {
     if host.is_empty() || host.contains(' ') {
         return None;
     }
-    let tail = if tail.starts_with('/') {
-        tail.to_string()
-    } else {
-        format!("/{tail}")
-    };
-    Some(format!("{scheme}://{}{tail}", host.to_lowercase()))
+    let slash = if tail.starts_with('/') { "" } else { "/" };
+    Some(format!("{scheme}://{}{slash}{tail}", host.to_lowercase()))
 }
 
 fn encode(text: &str) -> String {
