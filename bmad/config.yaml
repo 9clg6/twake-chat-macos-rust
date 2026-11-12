@@ -1,0 +1,5 @@
+project_name: "twake-chat-macos-rust"
+project_type: "desktop-app"
+project_level: 4
+output_folder: "docs"
+user_name: "clement"
