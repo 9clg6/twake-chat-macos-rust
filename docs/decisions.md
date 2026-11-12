@@ -159,13 +159,11 @@ merged before the code that needs it. Product decisions of the React app keep th
 ## A024 Settings core: pure preferences, notification levels, one port - deviations to validate
 - Context: FR-128, FR-129, FR-133 (`docs/dev/settings-api-sketch.md`; tests in `crates/twake-domain/tests/{preferences,preferences_json,notification_level}.rs`, `crates/twake-app/tests/settings_state.rs`, `crates/twake-testing/tests/preferences_store.rs`).
 - Decision: `twake_domain::{preferences, notifications}` and `twake_app::settings` are pure (A011); `PreferencesPort` (boxed `Send` futures, A009) has `FakePreferences` and a contract suite for the future `twake-store` adapter. No new dependency (`serde_json` was already in `twake-domain`; `cargo xtask check-deps` and `cargo deny check` pass).
-- Deliberate differences from the PRD and the React client, to be validated by the owner:
-  1. `All` is a firm choice for a room; the React client follows the default of the account.
-  2. A muted room is `Mentions` or `None` (D615).
-  3. `reduced_motion` is in `SystemEnv` (read from the OS), not a setting.
-  4. One global notification level; React has `directMessages` and `groups` apart (D22).
-  5. The JSON schema v1 is deduced from the React code; v2 renames `clock` to `time_format` and `category` to `sections`.
-  6. `from_json` does not report a reset: a corrupted file gives the defaults without a trace.
-  7. The domain knows 7 languages (`SUPPORTED_LANGUAGES`) while `twake-i18n` embeds 2: the others fall back until their catalogues exist.
-  8. `ColorScheme` and `HourCycle` exist here and in `twake-ui-kit`; the UI converts between them.
+- The owner's rule is to follow the React client. Resolved: (1) `All` is firm for a room, as in React (a room on `All` notifies whatever the account default); (2) a muted room is `None` only; (3) two account levels, `direct_messages` and `groups` (`All` or `Mentions`), picked per `RoomKind` by `effective_level(room, kind, defaults)`, as in React; (4) the theme AND the language of the common settings of ToM win over the local choice while they are set (D38, D67): `ViewSettings.appearance_locked`, `language_locked`, `common_settings_url`; the local choice is never touched and comes back; the language is the first two letters of ToM's value (`fra` is `fr`), as in React; (5) JSON v2: the former `notifications` key is read only when `direct_messages` and `groups` are absent, an invalid value is the default of its field.
+- Still open, to be validated by the owner:
+  1. `reduced_motion` is in `SystemEnv` (read from the OS), not a setting.
+  2. The JSON schema v1 is deduced from the React code; v2 renames `clock` to `time_format` and `category` to `sections`.
+  3. `from_json` does not report a reset: a corrupted file gives the defaults without a trace.
+  4. The domain knows 7 languages (`SUPPORTED_LANGUAGES`) while `twake-i18n` embeds 2: the others fall back until their catalogues exist.
+  5. `ColorScheme` and `HourCycle` exist here and in `twake-ui-kit`; the UI converts between them.
 - Consequences: a Settings screen reads `SettingsState::view(&SystemEnv)` and nothing else; changing a deviation is a change of the tests first.
