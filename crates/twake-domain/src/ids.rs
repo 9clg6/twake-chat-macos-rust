@@ -33,9 +33,8 @@ pub enum IdError {
     TooLong,
 }
 
-/// Checks the sigil, the length, the characters and the server name of `s`.
-/// Returns the byte index of the `:` that starts the server name, if there is one.
-fn split(s: &str, sigil: char) -> Result<Option<usize>, IdError> {
+/// Strips the sigil and checks the length: what follows the sigil.
+fn body(s: &str, sigil: char) -> Result<&str, IdError> {
     let Some(body) = s.strip_prefix(sigil) else {
         return Err(if s.is_empty() {
             IdError::Empty
@@ -46,16 +45,29 @@ fn split(s: &str, sigil: char) -> Result<Option<usize>, IdError> {
     if s.len() > MAX_BYTES {
         return Err(IdError::TooLong);
     }
+    Ok(body)
+}
+
+/// The part before the server name: not empty, no whitespace, no control character.
+fn check_opaque(opaque: &str) -> Result<(), IdError> {
+    if opaque.is_empty() {
+        Err(IdError::Empty)
+    } else if opaque.chars().any(|c| c.is_whitespace() || c.is_control()) {
+        Err(IdError::InvalidCharacter)
+    } else {
+        Ok(())
+    }
+}
+
+/// Checks the sigil, the length, the characters and the server name of `s`.
+/// Returns the byte index of the `:` that starts the server name, if there is one.
+fn split(s: &str, sigil: char) -> Result<Option<usize>, IdError> {
+    let body = body(s, sigil)?;
     let (opaque, server) = match body.split_once(':') {
         Some((opaque, server)) => (opaque, Some(server)),
         None => (body, None),
     };
-    if opaque.is_empty() {
-        return Err(IdError::Empty);
-    }
-    if opaque.chars().any(|c| c.is_whitespace() || c.is_control()) {
-        return Err(IdError::InvalidCharacter);
-    }
+    check_opaque(opaque)?;
     match server {
         None => Ok(None),
         Some(server) if is_server_name(server) => Ok(Some(sigil.len_utf8() + opaque.len())),
@@ -66,28 +78,27 @@ fn split(s: &str, sigil: char) -> Result<Option<usize>, IdError> {
 /// Hostname, IPv4 or `[IPv6]`, then an optional `:port`.
 fn is_server_name(s: &str) -> bool {
     let (host_ok, after_host) = match s.strip_prefix('[') {
-        Some(rest) => match rest.split_once(']') {
-            Some((ip, after)) => (
-                !ip.is_empty()
-                    && ip
-                        .chars()
-                        .all(|c| c.is_ascii_hexdigit() || c == ':' || c == '.'),
-                after,
-            ),
-            None => return false,
-        },
+        Some(rest) => rest
+            .split_once(']')
+            .map_or((false, ""), |(ip, after)| (is_ip_literal(ip), after)),
         None => {
             let (host, after) = s.split_at(s.find(':').unwrap_or(s.len()));
-            (
-                !host.is_empty()
-                    && host
-                        .chars()
-                        .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-'),
-                after,
-            )
+            (is_hostname(host), after)
         }
     };
     host_ok && (after_host.is_empty() || after_host.strip_prefix(':').is_some_and(is_port))
+}
+
+fn is_ip_literal(s: &str) -> bool {
+    !s.is_empty()
+        && s.chars()
+            .all(|c| c.is_ascii_hexdigit() || c == ':' || c == '.')
+}
+
+fn is_hostname(s: &str) -> bool {
+    !s.is_empty()
+        && s.chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-')
 }
 
 fn is_port(s: &str) -> bool {

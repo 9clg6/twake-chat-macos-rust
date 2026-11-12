@@ -30,28 +30,29 @@ impl CrateInfo {
         }
     }
 
-    /// Adds a normal or build dependency on a workspace crate.
-    pub fn dep(mut self, internal: &str) -> Self {
-        self.deps.insert(internal.to_owned());
+    fn with(mut self, set: fn(&mut Self) -> &mut BTreeSet<String>, name: &str) -> Self {
+        set(&mut self).insert(name.to_owned());
         self
+    }
+
+    /// Adds a normal or build dependency on a workspace crate.
+    pub fn dep(self, internal: &str) -> Self {
+        self.with(|c| &mut c.deps, internal)
     }
 
     /// Adds a dev-dependency on a workspace crate.
-    pub fn dev_dep(mut self, internal: &str) -> Self {
-        self.dev_deps.insert(internal.to_owned());
-        self
+    pub fn dev_dep(self, internal: &str) -> Self {
+        self.with(|c| &mut c.dev_deps, internal)
     }
 
     /// Adds a normal or build dependency on a crate outside the workspace.
-    pub fn external(mut self, name: &str) -> Self {
-        self.externals.insert(name.to_owned());
-        self
+    pub fn external(self, name: &str) -> Self {
+        self.with(|c| &mut c.externals, name)
     }
 
     /// Adds a dev-dependency on a crate outside the workspace.
-    pub fn dev_external(mut self, name: &str) -> Self {
-        self.dev_externals.insert(name.to_owned());
-        self
+    pub fn dev_external(self, name: &str) -> Self {
+        self.with(|c| &mut c.dev_externals, name)
     }
 
     /// Does this crate have a normal dependency on the workspace crate `internal`?
@@ -60,7 +61,7 @@ impl CrateInfo {
     }
 }
 
-/// The rule a dependency breaks, most specific first in `classify`.
+/// The rule a dependency breaks, most specific one is reported.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum RuleId {
     /// An internal edge absent from the table.
@@ -247,20 +248,26 @@ impl Rules {
         if dev && dep == FAKES && krate != FAKES {
             return None;
         }
-        if !dev && self.is_hard_rule_crate(LEAVES, krate) {
-            return Some(RuleId::Leaf);
-        }
+        self.hard_internal(krate, dep, dev).or_else(|| {
+            let listed = self.allowed.get(krate).is_some_and(|tos| tos.contains(dep));
+            (!listed).then_some(RuleId::InternalEdge)
+        })
+    }
+
+    /// Hard rules 1 to 3 on an internal edge.
+    fn hard_internal(&self, krate: &str, dep: &str, dev: bool) -> Option<RuleId> {
         let adapter = ADAPTERS.contains(&dep);
-        if self.is_hard_rule_crate(PURE_CORE, krate)
+        if !dev && self.is_hard_rule_crate(LEAVES, krate) {
+            Some(RuleId::Leaf)
+        } else if self.is_hard_rule_crate(PURE_CORE, krate)
             && (adapter || PURE_CORE_INTERNAL_BANS.contains(&dep))
         {
-            return Some(RuleId::PureCore);
+            Some(RuleId::PureCore)
+        } else if self.is_hard_rule_crate(UI, krate) && adapter {
+            Some(RuleId::UiAdapter)
+        } else {
+            None
         }
-        if self.is_hard_rule_crate(UI, krate) && adapter {
-            return Some(RuleId::UiAdapter);
-        }
-        let listed = self.allowed.get(krate).is_some_and(|tos| tos.contains(dep));
-        (!listed).then_some(RuleId::InternalEdge)
     }
 
     /// The most specific rule broken by `krate` depending on the external crate `dep`.
