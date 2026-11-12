@@ -1,8 +1,12 @@
 //! Pure domain types and rules: ids, room summaries, message view models, read state, power levels, errors.
 
+pub mod commands;
 mod ids;
+pub mod markdown;
+pub mod mention;
 pub mod read_state;
 pub mod room_list;
+pub mod search;
 pub mod session;
 mod time;
 pub mod timeline;
