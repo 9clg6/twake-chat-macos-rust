@@ -113,7 +113,7 @@ pub fn command(key: &str, m: &Modifiers) -> Option<Command> {
 }
 
 /// Applies a command that needs only the text: the others (caret rows, clipboard, submit) need the screen.
-pub(super) fn edit(buffer: &mut TextBuffer, command: Command) {
+pub fn edit(buffer: &mut TextBuffer, command: Command) {
     match command {
         Command::Delete(kind) => buffer.delete(kind),
         Command::Newline => buffer.insert("\n"),
