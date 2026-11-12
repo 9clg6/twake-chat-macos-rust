@@ -458,3 +458,57 @@ proptest! {
         );
     }
 }
+
+// ------------------------------------------------------------ link and underline edge cases
+
+#[test]
+fn underline_of_one_character_is_exact() {
+    assert_eq!(html("<u>x</u>"), some("<u>x</u>"));
+}
+
+#[test]
+fn empty_underline_stays_text() {
+    let out = to_message("<u></u>");
+    assert_eq!(out.body, "<u></u>");
+    assert_eq!(out.formatted_body, None);
+}
+
+#[test]
+fn link_with_a_space_in_the_address_stays_text() {
+    let out = html("[x](https://a.org/a b)").unwrap_or_default();
+    assert!(!out.contains("<a "), "{out}");
+}
+
+#[test]
+fn link_with_a_control_character_stays_text() {
+    let out = html("[x](https://a.org/\u{7}a)").unwrap_or_default();
+    assert!(!out.contains("<a "), "{out}");
+}
+
+#[test]
+fn link_with_an_empty_label_stays_text() {
+    let out = html("[](https://a.org)").unwrap_or_default();
+    assert!(!out.contains("<a "), "{out}");
+}
+
+#[test]
+fn link_dialog_refuses_a_scheme_without_host() {
+    assert_eq!(link_markdown("t", "https://"), None);
+}
+
+#[test]
+fn javascript_address_stays_text() {
+    let out = html("[a](javascript:alert(1))").unwrap_or_default();
+    assert!(!out.contains("<a "), "{out}");
+    assert!(!out.contains("href"), "{out}");
+}
+
+#[test]
+fn quote_in_an_address_cannot_add_an_attribute() {
+    let out = html("[a](https://a.org/\"onmouseover=\"x)").unwrap_or_default();
+    assert!(
+        out.contains("href=\"https://a.org/&quot;onmouseover=&quot;x\""),
+        "{out}"
+    );
+    assert!(!out.contains("\" onmouseover"), "{out}");
+}
