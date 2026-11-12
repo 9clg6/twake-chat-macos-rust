@@ -218,12 +218,38 @@ fn the_device_survives_an_expired_session_and_the_next_login() {
 }
 
 #[test]
-fn the_device_survives_a_sign_out() {
+fn a_sign_out_forgets_the_device_the_server_deleted() {
+    let mut machine = signed_in(&session("DEVICE1", "tok-1"));
+    machine.apply(E::SignOut);
+    assert_eq!(
+        machine.device_id(),
+        Some(&device("DEVICE1")),
+        "still known while the logout runs"
+    );
+    machine.apply(E::SignOutDone);
+    assert_eq!(machine.state(), &S::SignedOut);
+    assert_eq!(machine.device_id(), None);
+}
+
+#[test]
+fn signing_out_an_expired_session_forgets_the_device_too() {
+    let mut machine = signed_in(&session("DEVICE1", "tok-1"));
+    machine.apply(E::Unauthorized401);
+    machine.apply(E::SignOut);
+    assert_eq!(machine.device_id(), None);
+}
+
+#[test]
+fn the_next_login_after_a_sign_out_starts_without_a_device() {
     let mut machine = signed_in(&session("DEVICE1", "tok-1"));
     machine.apply(E::SignOut);
     machine.apply(E::SignOutDone);
-    assert_eq!(machine.state(), &S::SignedOut);
-    assert_eq!(machine.device_id(), Some(&device("DEVICE1")));
+    machine.apply(E::ServerEntered);
+    machine.apply(E::HomeserverResolved(homeserver()));
+    machine.apply(E::SsoCallback);
+    assert_eq!(machine.device_id(), None);
+    machine.apply(E::LoginOk(session("DEVICE2", "tok-2")));
+    assert_eq!(machine.device_id(), Some(&device("DEVICE2")));
 }
 
 #[test]
@@ -370,15 +396,17 @@ proptest! {
     }
 
     #[test]
-    fn the_device_is_never_forgotten_once_known(
+    fn the_device_is_forgotten_only_by_a_completed_sign_out(
         events in proptest::collection::vec(any_event(), 0..40)
     ) {
         let mut machine = SessionMachine::new();
-        let mut known = false;
         for event in events {
-            machine.apply(event);
-            known |= machine.device_id().is_some();
-            prop_assert_eq!(machine.device_id().is_some(), known);
+            let had = machine.device_id().cloned();
+            machine.apply(event.clone());
+            if had.is_some() && machine.device_id().is_none() {
+                prop_assert!(matches!(event, E::SignOut | E::SignOutDone), "{event:?}");
+                prop_assert!(matches!(machine.state(), S::SignedOut), "{:?}", machine.state());
+            }
         }
     }
 }

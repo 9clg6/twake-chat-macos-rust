@@ -204,8 +204,10 @@ impl SessionMachine {
     pub fn new() -> Self;                                    // SignedOut, no device
     pub fn apply(&mut self, event: SessionEvent);            // an event not listed for the state is ignored
     pub fn state(&self) -> &SessionState;
-    /// The device of the last session seen (`LoginOk`, `Restore`): kept through Expired, SigningOut,
-    /// SignedOut and failed attempts, replaced by the next `LoginOk`. The login sends it as
+    /// The device of the last session seen (`LoginOk`, `Restore`): kept through Expired and failed
+    /// attempts, replaced by the next `LoginOk`; FORGOTTEN (None) when a sign-out completes: `SignOutDone`, or
+    /// `SignOut` on an Expired session (the server deletes the device and its E2EE keys; reusing the id
+    /// would give DEVICE_KEYS_DIVERGED). The login sends it as
     /// `device_id` (FR-014); the server may still answer another one.
     pub fn device_id(&self) -> Option<&DeviceId>;
 }
@@ -253,10 +255,7 @@ pub fn contract::session_store(make: impl Fn() -> Arc<dyn SessionStorePort>) -> 
 
 1. **`AwaitingSso` renamed `AwaitingLogin`**: FR-012 also asks for the password form, so the
    state after discovery is not only SSO. Say if you want both names.
-2. **Device id after an explicit sign-out**: kept (FR-014 says "reused at next sign-in"), but the
-   server deletes the device on logout, so its E2EE keys are gone; reusing the id is allowed by
-   the spec (`device_id` of the login request) but D396 only speaks of a session the server ended.
-   Pinned as kept; decide before the adapter.
+2. **Device id after an explicit sign-out**: decided (coordinator): forgotten, because the server deletes the device and reusing its id gives DEVICE_KEYS_DIVERGED. Only an expiry (401, soft logout) keeps it for the next login (FR-014).
 3. **Restore as `LoggingIn`**: a stored session is checked (D72, `whoami`) before it is Active; if
    the check fails with a 401 the machine goes to `AwaitingLogin`, not `Expired` (no "session has
    ended" message for a restart). FR-015's 401 message is therefore for sync only.
