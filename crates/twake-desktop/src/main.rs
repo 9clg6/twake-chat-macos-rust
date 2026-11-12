@@ -1,10 +1,14 @@
 //! Composition root: builds the runtime, wires the adapters and opens the main window.
 
+use gallery::Gallery;
 use twake_gpui::{
-    App, Application, Bounds, Context, IntoElement, Render, TitlebarOptions, Window, WindowBounds,
-    WindowOptions, div, prelude::*, px, rgb, size,
+    App, Application, Bounds, Context, IntoElement, Render, TitlebarOptions, Window,
+    WindowAppearance, WindowBounds, WindowOptions, div, prelude::*, px, rgb, size,
 };
 use twake_tokens::{LIGHT, Rgba8};
+use twake_ui_kit::view::IconAssets;
+
+mod gallery;
 
 const APP_TITLE: &str = "Twake Chat";
 const WINDOW_SIZE: (f32, f32) = (1100.0, 720.0);
@@ -32,20 +36,30 @@ impl Render for Root {
 // Start-up is the one place where `expect` is allowed (ARCHITECTURE section 4).
 #[allow(clippy::expect_used)]
 fn main() {
-    Application::new().run(|cx: &mut App| {
-        let bounds = Bounds::centered(None, size(px(WINDOW_SIZE.0), px(WINDOW_SIZE.1)), cx);
-        cx.open_window(
-            WindowOptions {
+    let gallery = std::env::args().any(|arg| arg == "--gallery");
+    Application::new()
+        .with_assets(IconAssets)
+        .run(move |cx: &mut App| {
+            let bounds = Bounds::centered(None, size(px(WINDOW_SIZE.0), px(WINDOW_SIZE.1)), cx);
+            let options = WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 titlebar: Some(TitlebarOptions {
                     title: Some(APP_TITLE.into()),
                     ..Default::default()
                 }),
                 ..Default::default()
-            },
-            |_, cx| cx.new(|_| Root),
-        )
-        .expect("open the main window");
-        cx.activate(true);
-    });
+            };
+            if gallery {
+                let dark = matches!(
+                    cx.window_appearance(),
+                    WindowAppearance::Dark | WindowAppearance::VibrantDark
+                );
+                cx.open_window(options, |_, cx| cx.new(|_| Gallery::new(dark)))
+                    .expect("open the gallery window");
+            } else {
+                cx.open_window(options, |_, cx| cx.new(|_| Root))
+                    .expect("open the main window");
+            }
+            cx.activate(true);
+        });
 }
