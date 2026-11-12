@@ -7,6 +7,7 @@ mod block;
 mod inline;
 
 pub(crate) use inline::escape;
+pub use inline::escape_markdown;
 
 /// A message as typed, and as Matrix wants it.
 #[derive(Debug, Clone, PartialEq, Eq)]

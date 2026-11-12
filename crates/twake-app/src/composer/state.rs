@@ -4,7 +4,7 @@ use twake_domain::commands::prepare;
 use twake_domain::mention::Mention;
 use twake_domain::{RoomId, UserId};
 
-use super::outgoing::{OutgoingMessage, SubmitError, build};
+use super::outgoing::{OutgoingMessage, SubmitError, build, escape_names};
 use super::suggest::{Sources, Suggestion, suggestions, written};
 use super::trigger::{Trigger, find_trigger};
 use super::{Access, ComposerMode, Draft, EditTarget, PrimaryAction, ReplyTarget, Selection};
@@ -179,7 +179,7 @@ impl ComposerState {
                 picked: std::mem::take(&mut self.picked),
             });
         }
-        self.text = target.body.clone();
+        self.text = escape_names(&target.body, &target.mentions);
         self.picked = target.mentions.clone();
         self.selection = self.at_end();
         self.mode = ComposerMode::Edit(target);

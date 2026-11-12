@@ -3,6 +3,34 @@
 /// Schemes a link may have (A020); anything else stays text.
 const LINK_SCHEMES: [&str; 4] = ["http://", "https://", "mailto:", "matrix:"];
 
+/// What a backslash may escape: the marks of a line, and the starts of a quote and a list.
+const ESCAPABLE: &str = "\\*_[]()<~`#>-";
+
+/// `name` written so that the parser reads it back as typed: a backslash before each char that
+/// would start a mark, and before a `>` or `-` that opens the text (a quote, a list). An `_`
+/// between two letters or digits is no mark and stays. A number opening a list (`1. `) is not
+/// escaped: ponytail, add it when a name starts that way.
+pub fn escape_markdown(name: &str) -> String {
+    let chars: Vec<char> = name.chars().collect();
+    let mut out = String::with_capacity(name.len());
+    for (i, &c) in chars.iter().enumerate() {
+        let inside_word = i > 0
+            && chars.get(i + 1).is_some_and(|n| n.is_alphanumeric())
+            && chars[i - 1].is_alphanumeric();
+        let marks = match c {
+            '\\' | '*' | '[' | ']' | '<' | '~' | '`' => true,
+            '_' => !inside_word,
+            '>' | '-' => i == 0,
+            _ => false,
+        };
+        if marks {
+            out.push('\\');
+        }
+        out.push(c);
+    }
+    out
+}
+
 /// `& < > " '` as entities.
 pub(crate) fn escape(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
@@ -42,7 +70,7 @@ fn find_close(
         .find(|&at| {
             let before = rest[..at].chars().next_back();
             let after = rest[at + delim.len()..].chars().next();
-            solid(before) && fits(before, after)
+            !rest[..at].ends_with('\\') && solid(before) && fits(before, after)
         })
 }
 
@@ -97,12 +125,32 @@ fn allowed_link(url: &str) -> bool {
             .any(|scheme| lower.strip_prefix(scheme).is_some_and(|r| !r.is_empty()))
 }
 
-/// `[text](address)` with an address of an allowed scheme.
+/// Where the label of a link ends: the first `](` with no `[` before it, an escaped char aside.
+/// It stops at the next `[`, so that the scans of a run of openers do not pile up.
+fn label_end(rest: &str) -> Option<usize> {
+    let bytes = rest.as_bytes();
+    let mut at = 1;
+    while at < bytes.len() {
+        match bytes[at] {
+            b'\\' => at += 2,
+            b'[' => return None,
+            b']' if bytes.get(at + 1) == Some(&b'(') => return Some(at),
+            _ => at += 1,
+        }
+    }
+    None
+}
+
+/// `[text](address)` with an address of an allowed scheme. The address ends at the first `)`;
+/// a `(`, a space or a control char before it makes no link, and stops the scan there.
 fn link(rest: &str) -> Option<(String, usize)> {
-    let label_end = rest.find("](")?;
-    let url_end = label_end + 2 + rest[label_end + 2..].find(')')?;
-    let (label, url) = (&rest[1..label_end], &rest[label_end + 2..url_end]);
-    if label.is_empty() || label.contains('[') || !allowed_link(url) {
+    let label_end = label_end(rest)?;
+    let start = label_end + 2;
+    let len = rest[start..]
+        .find(|c: char| c == ')' || c == '(' || c.is_whitespace() || c.is_control())?;
+    let url_end = start + len;
+    let (label, url) = (&rest[1..label_end], &rest[start..url_end]);
+    if label.is_empty() || !rest[url_end..].starts_with(')') || !allowed_link(url) {
         return None;
     }
     let html = format!("<a href=\"{}\">{}</a>", escape(url), inline(label));
@@ -115,6 +163,15 @@ fn emphasized(rest: &str, prev: Option<char>) -> Option<(String, usize)> {
     pair(rest, "**", "strong").or_else(|| emphasis(rest, mark, prev))
 }
 
+/// `\*`: the char after a backslash, as text, when it is one a backslash may escape.
+fn escaped(rest: &str) -> Option<(String, usize)> {
+    let c = rest[1..]
+        .chars()
+        .next()
+        .filter(|c| ESCAPABLE.contains(*c))?;
+    Some((escape(&c.to_string()), 1 + c.len_utf8()))
+}
+
 /// The mark that starts `rest`, as HTML, and the bytes it takes.
 fn mark_at(rest: &str, prev: Option<char>) -> Option<(String, usize)> {
     match rest.chars().next()? {
@@ -123,6 +180,7 @@ fn mark_at(rest: &str, prev: Option<char>) -> Option<(String, usize)> {
         '`' => code(rest),
         '[' => link(rest),
         '<' => underline(rest),
+        '\\' => escaped(rest),
         _ => None,
     }
 }

@@ -1,6 +1,7 @@
 //! What the suggestion layer offers for a trigger, and what picking one writes.
 
 use twake_domain::commands::{BotCommand, match_commands};
+use twake_domain::markdown::escape_markdown;
 use twake_domain::mention::{
     LinkableRoom, Member, Mention, MentionCandidate, match_members, match_rooms,
 };
@@ -126,16 +127,17 @@ pub(super) fn suggestions(sources: &Sources, me: &UserId, trigger: &Trigger) -> 
     }
 }
 
-/// What picking `suggestion` writes in the text, and the mention to remember (an emoji has none).
+/// What picking `suggestion` writes in the text (a name with its Markdown escaped, so that it stays
+/// literal), and the mention to remember (an emoji has none).
 pub(super) fn written(suggestion: &Suggestion) -> (String, Option<Mention>) {
     match suggestion {
         Suggestion::Person { user_id, name } => (
-            format!("{name} "),
+            format!("{} ", escape_markdown(name)),
             Some(Mention::user(user_id.clone(), name)),
         ),
         Suggestion::Everyone => ("@room ".into(), Some(Mention::everyone())),
         Suggestion::Room { alias } => (
-            format!("{} ", alias.as_str()),
+            format!("{} ", escape_markdown(alias.as_str())),
             Some(Mention::room(alias.clone(), alias.as_str())),
         ),
         Suggestion::Emoji { glyph } => (glyph.clone(), None),

@@ -1,7 +1,7 @@
 //! What Enter makes of the text: the message to send, or why none.
 
 use twake_domain::commands::{BotCommand, LocalCommand, Prepared};
-use twake_domain::markdown::to_message;
+use twake_domain::markdown::{OutgoingBody, escape_markdown, to_message};
 use twake_domain::mention::{Mention, Mentions, extract, link_names};
 use twake_domain::{EventId, UserId};
 
@@ -89,6 +89,21 @@ fn add_author(mentions: &mut Mentions, author: &UserId) {
     }
 }
 
+/// `text` with each name written as the list writes it (Markdown escaped); the way back of
+/// `unescape_names`. ponytail: names that contain one another are replaced in picked order.
+pub(super) fn escape_names(text: &str, picked: &[Mention]) -> String {
+    picked.iter().fold(text.to_string(), |text, m| {
+        text.replace(&m.name, &escape_markdown(&m.name))
+    })
+}
+
+/// `text` with each escaped name back to the name itself: what the plain body holds.
+fn unescape_names(text: &str, picked: &[Mention]) -> String {
+    picked.iter().fold(text.to_string(), |text, m| {
+        text.replace(&escape_markdown(&m.name), &m.name)
+    })
+}
+
 /// The kind, the text and the bot command of a prepared text; a command of the device and an
 /// unknown one make no message.
 fn parts(prepared: Prepared) -> Result<(MessageKind, String, Option<BotCommand>), SubmitError> {
@@ -135,13 +150,19 @@ pub(super) fn build(
 ) -> Result<OutgoingMessage, SubmitError> {
     let (kind, body, bot_command) = parts(prepared)?;
     let (all, newly) = mention_sets(mode, picked);
+    let markdown = to_message(&body);
+    let body = unescape_names(&body, &all);
     let mut mentions = extract(&body, &all);
     let mut notify = match mode {
         ComposerMode::Edit(_) => extract(&body, &newly),
         _ => mentions.clone(),
     };
     let relation = relate(mode, me, &mut mentions, &mut notify);
-    let formatted_body = link_names(to_message(&body), &all).formatted_body;
+    let linked = OutgoingBody {
+        body: body.clone(),
+        ..markdown
+    };
+    let formatted_body = link_names(linked, &all).formatted_body;
     Ok(OutgoingMessage {
         kind,
         body,

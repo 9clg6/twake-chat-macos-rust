@@ -9,7 +9,7 @@ pub use link::link_names;
 
 use crate::{RoomAlias, UserId};
 
-/// Most people one message mentions or one list offers (FR-054).
+/// Most people one list offers (FR-054); a message names as many as were picked.
 pub const MAX_MENTIONS: usize = 25;
 
 /// What a mention points at.
@@ -67,15 +67,14 @@ pub struct Mentions {
     pub room: bool,
 }
 
-/// D487/D401: the picked mentions the text still names, each person once in the order picked, at
-/// most `MAX_MENTIONS` people. A room link notifies nobody.
+/// D487/D401: the picked mentions the text still names, each person once in the order picked. A room link notifies nobody.
 pub fn extract(text: &str, picked: &[Mention]) -> Mentions {
     let mut found = Mentions::default();
     for mention in picked.iter().filter(|m| text.contains(&m.name)) {
         match &mention.target {
             MentionTarget::Everyone => found.room = true,
             MentionTarget::User(id) => {
-                if found.user_ids.len() < MAX_MENTIONS && !found.user_ids.contains(id) {
+                if !found.user_ids.contains(id) {
                     found.user_ids.push(id.clone());
                 }
             }
