@@ -82,3 +82,9 @@ merged before the code that needs it. Product decisions of the React app keep th
 - Scope: icons whose colours are hard-coded in the package (reported by the exporter) keep them: they do not follow `currentColor` and cannot be recoloured.
 - Consequences: `generated.rs` is committed and CI runs `cargo xtask icons --check`; `twake-icons` stays dependency-free.
 - Risk: none beyond a stale `generated.rs`, which `--check` catches; a bad id or viewBox in a new export fails the generator.
+
+## A014 Button: `action` colours in twake-ui-kit, pressed, paddings, ring
+- Context: `twake-tokens` has no `action` colours; the ui-kit foundation tests (`crates/twake-ui-kit/tests`) pin the values of design-system.md lines 107-114.
+- Decision: hover alpha (10 light, 20 dark), disabled (61, 82) and disabledBackground (31) are constants of `twake-ui-kit::button`, until the token generator exports `action`. Pressed looks like hover (MUI has no pressed colour). Outlined small and large padding are deduced (16 x 9, 32 x 13). The focus ring is 2 px in `primary.main`. The colour glue is `twake_ui_kit::color`, not `twake-gpui`, so the edge `twake-gpui -> twake-tokens` stays forbidden (`check-deps`).
+- Consequences: the constants move to `twake-tokens` when `action` is generated; `Button` in `view.rs` has no test (needs a window).
+- Risk: the deduced paddings may differ from twake-mui; the disabled outlined border is not decided (it follows the text colour).
