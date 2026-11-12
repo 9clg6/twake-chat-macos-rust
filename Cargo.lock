@@ -5894,6 +5894,9 @@ dependencies = [
 [[package]]
 name = "twake-tokens"
 version = "0.1.0"
+dependencies = [
+ "serde_json",
+]
 
 [[package]]
 name = "twake-ui"
@@ -7064,6 +7067,7 @@ name = "xtask"
 version = "0.1.0"
 dependencies = [
  "cargo_metadata",
+ "serde_json",
 ]
 
 [[package]]
