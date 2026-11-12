@@ -109,11 +109,16 @@ fn link(rest: &str) -> Option<(String, usize)> {
     Some((html, url_end + 1))
 }
 
+/// `**b**` or `*i*`, `_i_`.
+fn emphasized(rest: &str, prev: Option<char>) -> Option<(String, usize)> {
+    let mark = rest.chars().next()?;
+    pair(rest, "**", "strong").or_else(|| emphasis(rest, mark, prev))
+}
+
 /// The mark that starts `rest`, as HTML, and the bytes it takes.
 fn mark_at(rest: &str, prev: Option<char>) -> Option<(String, usize)> {
     match rest.chars().next()? {
-        '*' => pair(rest, "**", "strong").or_else(|| emphasis(rest, '*', prev)),
-        '_' => emphasis(rest, '_', prev),
+        '*' | '_' => emphasized(rest, prev),
         '~' => pair(rest, "~~", "del"),
         '`' => code(rest),
         '[' => link(rest),
