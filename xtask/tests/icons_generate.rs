@@ -254,6 +254,7 @@ fn a_bad_viewbox_is_refused_with_the_icon_and_the_text() {
         "a b c d",
         "",
         "0 0 0 16",
+        "0 0 16 0",
         "0 0 16 -1",
     ] {
         let text = message(&one("a-b", bad, "<g/>"));
