@@ -62,8 +62,10 @@ fn main() {
                 cx.open_window(options, |_, cx| cx.new(|_| Gallery::new(dark)))
                     .expect("open the gallery window");
             } else if preview {
-                cx.open_window(options, |_, cx| cx.new(|cx| Preview::new(dark, bench, cx)))
-                    .expect("open the preview window");
+                cx.open_window(options, |window, cx| {
+                    cx.new(|cx| Preview::new(dark, bench, window, cx))
+                })
+                .expect("open the preview window");
             } else {
                 cx.open_window(options, |_, cx| cx.new(|_| Root))
                     .expect("open the main window");
