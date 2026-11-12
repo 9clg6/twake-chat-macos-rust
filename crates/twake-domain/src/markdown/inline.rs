@@ -14,21 +14,25 @@ pub fn escape_markdown(name: &str) -> String {
     let chars: Vec<char> = name.chars().collect();
     let mut out = String::with_capacity(name.len());
     for (i, &c) in chars.iter().enumerate() {
-        let inside_word = i > 0
-            && chars.get(i + 1).is_some_and(|n| n.is_alphanumeric())
-            && chars[i - 1].is_alphanumeric();
-        let marks = match c {
-            '\\' | '*' | '[' | ']' | '<' | '~' | '`' => true,
-            '_' => !inside_word,
-            '>' | '-' => i == 0,
-            _ => false,
-        };
-        if marks {
+        if starts_mark(&chars, i) {
             out.push('\\');
         }
         out.push(c);
     }
     out
+}
+
+/// Whether the char at `i` of `chars` needs a backslash.
+fn starts_mark(chars: &[char], i: usize) -> bool {
+    let inside_word = i > 0
+        && chars[i - 1].is_alphanumeric()
+        && chars.get(i + 1).is_some_and(|n| n.is_alphanumeric());
+    match chars[i] {
+        '\\' | '*' | '[' | ']' | '<' | '~' | '`' => true,
+        '_' => !inside_word,
+        '>' | '-' => i == 0,
+        _ => false,
+    }
 }
 
 /// `& < > " '` as entities.
@@ -141,16 +145,21 @@ fn label_end(rest: &str) -> Option<usize> {
     None
 }
 
-/// `[text](address)` with an address of an allowed scheme. The address ends at the first `)`;
-/// a `(`, a space or a control char before it makes no link, and stops the scan there.
+/// Where the address starting at `start` ends: its first `)`; a `(`, a space or a control char
+/// before it makes no link, and stops the scan there.
+fn url_end(rest: &str, start: usize) -> Option<usize> {
+    let len = rest[start..]
+        .find(|c: char| c == ')' || c == '(' || c.is_whitespace() || c.is_control())?;
+    rest[start + len..].starts_with(')').then_some(start + len)
+}
+
+/// `[text](address)` with an address of an allowed scheme.
 fn link(rest: &str) -> Option<(String, usize)> {
     let label_end = label_end(rest)?;
     let start = label_end + 2;
-    let len = rest[start..]
-        .find(|c: char| c == ')' || c == '(' || c.is_whitespace() || c.is_control())?;
-    let url_end = start + len;
+    let url_end = url_end(rest, start)?;
     let (label, url) = (&rest[1..label_end], &rest[start..url_end]);
-    if label.is_empty() || !rest[url_end..].starts_with(')') || !allowed_link(url) {
+    if label.is_empty() || !allowed_link(url) {
         return None;
     }
     let html = format!("<a href=\"{}\">{}</a>", escape(url), inline(label));
@@ -179,8 +188,7 @@ fn mark_at(rest: &str, prev: Option<char>) -> Option<(String, usize)> {
         '~' => pair(rest, "~~", "del"),
         '`' => code(rest),
         '[' => link(rest),
-        '<' => underline(rest),
-        '\\' => escaped(rest),
+        '<' | '\\' => underline(rest).or_else(|| escaped(rest)),
         _ => None,
     }
 }
