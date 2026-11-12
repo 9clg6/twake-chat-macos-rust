@@ -9,3 +9,4 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+cargo_metadata = "0.23.1"
