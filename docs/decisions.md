@@ -88,3 +88,9 @@ merged before the code that needs it. Product decisions of the React app keep th
 - Decision: hover alpha (10 light, 20 dark), disabled (61, 82) and disabledBackground (31) are constants of `twake-ui-kit::button`, until the token generator exports `action`. Pressed looks like hover (MUI has no pressed colour). Outlined small and large padding are deduced (16 x 9, 32 x 13). The focus ring is 2 px in `primary.main`. The colour glue is `twake_ui_kit::color`, not `twake-gpui`, so the edge `twake-gpui -> twake-tokens` stays forbidden (`check-deps`).
 - Consequences: the constants move to `twake-tokens` when `action` is generated; `Button` in `view.rs` has no test (needs a window).
 - Risk: the deduced paddings may differ from twake-mui; the disabled outlined border is not decided (it follows the text colour).
+
+## A015 Accent folding in `twake-domain`: `unicode-normalization`
+- Context: the search of a room name ignores case and accents (D392, `room_list::matches_search`); the standard library has no accent folding.
+- Decision: `twake-domain` depends on `unicode-normalization` (pure Rust, no tokio, no I/O). A name and a query are folded the same way: NFD, combining marks removed, then lower case.
+- Consequences: "Élodie" is found by "elo" and "ÉLO"; letters that do not decompose (`ø`, `ß`, `æ`) are not folded. `cargo xtask check-deps` accepts the dependency (rule 1 forbids adapters, GPUI and `tokio*` only).
+- Risk: a new Unicode version may change a decomposition; the tests pin a few accents only.

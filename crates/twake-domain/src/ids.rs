@@ -258,3 +258,80 @@ impl RoomAlias {
         self.0.server_name()
     }
 }
+
+/// A Matrix content URI: `mxc://<server name>/<media id>`.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct MxcUri {
+    raw: String,
+    /// Byte index of the `/` between the server name and the media id.
+    slash: usize,
+}
+
+impl MxcUri {
+    const SCHEME: &'static str = "mxc://";
+
+    /// Parses a content URI: a server name, then one media id without blank or control character.
+    pub fn parse(s: &str) -> Result<Self, IdError> {
+        if s.is_empty() {
+            return Err(IdError::Empty);
+        }
+        let rest = s.strip_prefix(Self::SCHEME).ok_or(IdError::WrongSigil)?;
+        let (server, media) = rest.split_once('/').ok_or(IdError::MissingServer)?;
+        if !is_server_name(server) {
+            return Err(IdError::InvalidServerName);
+        }
+        if media.is_empty() {
+            return Err(IdError::Empty);
+        }
+        if media.contains('/') || has_blank(media) {
+            return Err(IdError::InvalidCharacter);
+        }
+        Ok(Self {
+            raw: s.to_owned(),
+            slash: Self::SCHEME.len() + server.len(),
+        })
+    }
+
+    /// The URI exactly as received.
+    pub fn as_str(&self) -> &str {
+        &self.raw
+    }
+
+    /// The server name, with its port if any.
+    pub fn server_name(&self) -> &str {
+        self.raw
+            .get(Self::SCHEME.len()..self.slash)
+            .unwrap_or_default()
+    }
+
+    /// The media id.
+    pub fn media_id(&self) -> &str {
+        self.raw.get(self.slash + 1..).unwrap_or_default()
+    }
+}
+
+/// A client transaction id: the identity of a message while it is being sent.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TxnId(String);
+
+impl TxnId {
+    /// Parses a transaction id: not empty, no whitespace or control character.
+    pub fn parse(s: &str) -> Result<Self, IdError> {
+        if s.is_empty() {
+            Err(IdError::Empty)
+        } else if has_blank(s) {
+            Err(IdError::InvalidCharacter)
+        } else {
+            Ok(Self(s.to_owned()))
+        }
+    }
+
+    /// The id exactly as received.
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+fn has_blank(s: &str) -> bool {
+    s.chars().any(|c| c.is_whitespace() || c.is_control())
+}

@@ -2,5 +2,9 @@
 
 mod ids;
 pub mod read_state;
+pub mod room_list;
+mod time;
+pub mod timeline;
 
-pub use ids::{EventId, IdError, RoomAlias, RoomId, UserId};
+pub use ids::{EventId, IdError, MxcUri, RoomAlias, RoomId, TxnId, UserId};
+pub use time::{Day, Timestamp};
