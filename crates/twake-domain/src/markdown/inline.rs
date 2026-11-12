@@ -136,7 +136,7 @@ pub(super) fn inline(src: &str) -> String {
         let rest = &src[at..];
         let (html, used) = mark_at(rest, prev).unwrap_or_else(|| {
             let c = rest.chars().next().unwrap_or_default();
-            (escape(c.encode_utf8(&mut [0; 4])), c.len_utf8())
+            (escape(&c.to_string()), c.len_utf8())
         });
         out.push_str(&html);
         at += used;
