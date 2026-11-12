@@ -145,3 +145,13 @@ merged before the code that needs it. Product decisions of the React app keep th
 - Alternatives: stay on 0.2.2 (no a11y; own NSAccessibility or AccessKit layer later, weeks of work per platform); hybrid with two dependency sets (rejected, APIs differ); `gpui-ce` (divergent surface).
 - Risks: a repackager who is not Zed (trust and continuity not verified); pre-1.0 breaking changes; open upstream a11y bugs (#66691 focus, #66690 cached views, #65623 duplicate ids); VoiceOver not yet tried; bench noisy.
 - To do before accepting: items of section 5 of the spike, first the VoiceOver pass and a calm bench.
+
+## A023 Message actions: pure rules, one port, a fixed row of reactions
+- Context: the menu of a message, reactions, selection, pins and power levels (`docs/dev/message-actions-api-sketch.md`; tests in `crates/twake-domain/tests/{reaction,power_levels,pinned}.rs`, `crates/twake-app/tests/{message_actions,reaction_toggle,selection}.rs`, `crates/twake-testing/tests/message_actions_port.rs`). No UI, no adapter yet.
+- Decision: `twake_domain::{reaction, power_levels, pinned}` and `twake_app::{reactions, message_actions, selection}` are pure (A011); `MessageActionsPort` (boxed `Send` futures, A009) has `FakeMessageActions` and a contract suite for the future adapter. No new dependency (`cargo xtask check-deps` and `cargo deny check` unchanged).
+- Quick reactions: a fixed row, ❤️ 👍 👎 😂 😮 😢 (D234, D274). The PRD FR-075 line "recent first" is stale. `RecentEmojis` (8 kept) only feeds the "recent" tab of the picker.
+- Deviation from the React client: Edit needs the right to send messages (it is an `m.room.message`); React does not check it.
+- Bulk delete acts on the subset the user may delete (own, or `can_redact`); the others are skipped, as in React. `selection_actions` offers Delete when one at least qualifies.
+- A creator of a v12 room has infinite power only when the room says so (`with_creator_infinite`): `level_of` is `i64::MAX` and every `can_*` holds.
+- Out of scope: Forward, Save, Edit history, "N Seen", Download, the assistant entries (D201), the full emoji picker, threads beyond "Start a thread".
+- Consequences: `Selection` has `len` but no `is_empty` (`is_active` says it), with a local `allow(clippy::len_without_is_empty)`, because `tests/selection.rs` compares `len() > 0` and clippy `len_zero` would fail on it if `is_empty` existed.

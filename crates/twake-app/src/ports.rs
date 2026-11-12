@@ -7,7 +7,7 @@ use futures::stream::BoxStream;
 use twake_domain::room_list::RoomListDiff;
 use twake_domain::session::Session;
 use twake_domain::timeline::TimelineDiff;
-use twake_domain::{RoomId, UserId};
+use twake_domain::{EventId, RoomId, UserId};
 
 /// Messages in a page of history.
 pub const TIMELINE_PAGE_SIZE: usize = 30;
@@ -106,4 +106,49 @@ pub trait DraftStorePort: Send + Sync {
 
     /// Forgets the draft of `room`; an unknown room is fine.
     fn clear(&self, room: RoomId) -> BoxFuture<'_, Result<(), DraftStoreError>>;
+}
+
+/// Why an action on a message failed.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum ActionError {
+    /// The user is not in this room.
+    #[error("room not found")]
+    RoomNotFound,
+    /// The room does not let the user do this.
+    #[error("not allowed")]
+    Forbidden,
+    /// The server cannot be reached.
+    #[error("the server is unavailable")]
+    Unavailable,
+}
+
+/// Reactions, redactions, pins and reports of a room.
+pub trait MessageActionsPort: Send + Sync {
+    /// Sends an `m.reaction` on `target`; returns the id of the reaction event.
+    fn send_reaction(
+        &self,
+        room: RoomId,
+        target: EventId,
+        key: String,
+    ) -> BoxFuture<'_, Result<EventId, ActionError>>;
+
+    /// Redacts an event (a reaction, a message); twice, or an unknown event, is fine.
+    fn redact(&self, room: RoomId, event: EventId) -> BoxFuture<'_, Result<(), ActionError>>;
+
+    /// Adds to `m.room.pinned_events`; already pinned is fine; the others stay, in order.
+    fn pin(&self, room: RoomId, event: EventId) -> BoxFuture<'_, Result<(), ActionError>>;
+
+    /// Takes out of `m.room.pinned_events`; the others stay.
+    fn unpin(&self, room: RoomId, event: EventId) -> BoxFuture<'_, Result<(), ActionError>>;
+
+    /// The pinned events now, in state order.
+    fn pinned(&self, room: RoomId) -> BoxFuture<'_, Result<Vec<EventId>, ActionError>>;
+
+    /// Reports a message to the server administrators, with an optional reason (D255).
+    fn report(
+        &self,
+        room: RoomId,
+        event: EventId,
+        reason: Option<String>,
+    ) -> BoxFuture<'_, Result<(), ActionError>>;
 }
