@@ -39,3 +39,4 @@ jobs:
       - run: cargo audit
       - run: cargo build --locked --workspace
       - run: cargo run --locked -p xtask -- tokens --check
+      - run: cargo run --locked -p xtask -- icons --check

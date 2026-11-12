@@ -1,24 +1,10 @@
 //! `cargo xtask tokens`: turns `docs/spec/tokens.json` into `crates/twake-tokens/src/generated.rs`.
 
-use std::fmt;
-
 use serde_json::{Map, Value};
 
-/// Why the tokens could not be generated; the text says what is wrong.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Error(String);
+use crate::common::{Res, fail, object, root as parse_root, string};
 
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-type Res<T> = Result<T, Error>;
-
-fn fail<T>(message: String) -> Res<T> {
-    Err(Error(message))
-}
+pub use crate::common::Error;
 
 const SHADES: [&str; 10] = [
     "50", "100", "200", "300", "400", "500", "600", "700", "800", "900",
@@ -137,20 +123,6 @@ fn color(text: &str) -> Res<String> {
     match hex(text).or_else(|| functional(text)) {
         Some([r, g, b, a]) => Ok(format!("Rgba8::new({r}, {g}, {b}, {a})")),
         None => fail(format!("unsupported colour {text:?}")),
-    }
-}
-
-fn string<'a>(value: &'a Value, what: &str) -> Res<&'a str> {
-    match value.as_str() {
-        Some(text) => Ok(text),
-        None => fail(format!("{what} is not a string")),
-    }
-}
-
-fn object<'a>(value: &'a Value, what: &str) -> Res<&'a Map<String, Value>> {
-    match value.as_object() {
-        Some(map) => Ok(map),
-        None => fail(format!("{what} is not an object")),
     }
 }
 
@@ -397,11 +369,7 @@ fn body(root: &Map<String, Value>) -> Res<String> {
 
 /// The text of `generated.rs` for the text of `tokens.json`.
 pub fn generate(json: &str) -> Result<String, Error> {
-    let value: Value = match serde_json::from_str(json) {
-        Ok(value) => value,
-        Err(error) => return fail(format!("invalid JSON: {error}")),
-    };
-    let root = object(&value, "tokens.json")?;
+    let root = &parse_root(json, "tokens.json")?;
     let version = version(root)?;
     let body = body(root)?;
     Ok(format!(

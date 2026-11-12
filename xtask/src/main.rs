@@ -3,8 +3,10 @@
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
+use xtask::Error;
 use xtask::check_deps::{Rules, check, load_graph};
-use xtask::tokens::generate;
+use xtask::icons;
+use xtask::tokens;
 
 fn check_deps() -> ExitCode {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR")).join("../Cargo.toml");
@@ -33,6 +35,28 @@ fn workspace_file(relative: &str) -> PathBuf {
         .join(relative)
 }
 
+/// A generator task: its default files and the function that renders the output.
+struct Task {
+    name: &'static str,
+    input: &'static str,
+    output: &'static str,
+    generate: fn(&str) -> Result<String, Error>,
+}
+
+const TOKENS: Task = Task {
+    name: "tokens",
+    input: "docs/spec/tokens.json",
+    output: "crates/twake-tokens/src/generated.rs",
+    generate: tokens::generate,
+};
+
+const ICONS: Task = Task {
+    name: "icons",
+    input: "docs/spec/icons.json",
+    output: "crates/twake-icons/src/generated.rs",
+    generate: icons::generate,
+};
+
 struct Options {
     input: PathBuf,
     output: PathBuf,
@@ -40,10 +64,10 @@ struct Options {
 }
 
 /// The flag that is unknown, or that lacks its value.
-fn parse_options(args: &[String]) -> Result<Options, &String> {
+fn parse_options<'a>(task: &Task, args: &'a [String]) -> Result<Options, &'a String> {
     let mut options = Options {
-        input: workspace_file("docs/spec/tokens.json"),
-        output: workspace_file("crates/twake-tokens/src/generated.rs"),
+        input: workspace_file(task.input),
+        output: workspace_file(task.output),
         check: false,
     };
     let mut args = args.iter();
@@ -59,20 +83,20 @@ fn parse_options(args: &[String]) -> Result<Options, &String> {
     Ok(options)
 }
 
-fn render(input: &Path) -> Result<String, String> {
+fn render(task: &Task, input: &Path) -> Result<String, String> {
     let json = std::fs::read_to_string(input)
         .map_err(|error| format!("cannot read {}: {error}", input.display()))?;
-    generate(&json).map_err(|error| error.to_string())
+    (task.generate)(&json).map_err(|error| error.to_string())
 }
 
-fn store(options: &Options, text: String) -> ExitCode {
-    let output = &options.output;
+fn store(task: &Task, options: &Options, text: String) -> ExitCode {
+    let (name, output) = (task.name, &options.output);
     if options.check {
         if std::fs::read_to_string(output).is_ok_and(|current| current == text) {
             return ExitCode::SUCCESS;
         }
         eprintln!(
-            "tokens: {} is stale; run `cargo xtask tokens`",
+            "{name}: {} is stale; run `cargo xtask {name}`",
             output.display()
         );
         return ExitCode::FAILURE;
@@ -80,27 +104,28 @@ fn store(options: &Options, text: String) -> ExitCode {
     match std::fs::write(output, text) {
         Ok(()) => ExitCode::SUCCESS,
         Err(error) => {
-            eprintln!("tokens: cannot write {}: {error}", output.display());
+            eprintln!("{name}: cannot write {}: {error}", output.display());
             ExitCode::from(2)
         }
     }
 }
 
-/// `tokens [--input FILE] [--output FILE] [--check]`: 0 done, 1 stale (`--check`), 2 failure.
-fn tokens(args: &[String]) -> ExitCode {
-    let options = match parse_options(args) {
+/// `<task> [--input FILE] [--output FILE] [--check]`: 0 done, 1 stale (`--check`), 2 failure.
+fn run(task: &Task, args: &[String]) -> ExitCode {
+    let name = task.name;
+    let options = match parse_options(task, args) {
         Ok(options) => options,
         Err(flag) => {
             eprintln!(
-                "tokens: unexpected {flag}; usage: cargo xtask tokens [--input FILE] [--output FILE] [--check]"
+                "{name}: unexpected {flag}; usage: cargo xtask {name} [--input FILE] [--output FILE] [--check]"
             );
             return ExitCode::from(2);
         }
     };
-    match render(&options.input) {
-        Ok(text) => store(&options, text),
+    match render(task, &options.input) {
+        Ok(text) => store(task, &options, text),
         Err(message) => {
-            eprintln!("tokens: {message}");
+            eprintln!("{name}: {message}");
             ExitCode::from(2)
         }
     }
@@ -111,8 +136,9 @@ fn main() -> ExitCode {
     let task = args.first().map_or("", String::as_str);
     match task {
         "check-deps" => return check_deps(),
-        "tokens" => return tokens(&args[1..]),
-        "check-size" | "icons" => eprintln!("xtask {task}: not implemented"),
+        "tokens" => return run(&TOKENS, &args[1..]),
+        "icons" => return run(&ICONS, &args[1..]),
+        "check-size" => eprintln!("xtask {task}: not implemented"),
         _ => eprintln!("usage: cargo xtask <check-deps|check-size|tokens|icons>"),
     }
     ExitCode::from(2)
