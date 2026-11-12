@@ -3,8 +3,8 @@
 use std::time::Instant;
 
 use twake_gpui::{
-    AnyElement, Context, InteractiveElement, IntoElement, ParentElement, Render, ScrollWheelEvent,
-    Styled, Window, div, px,
+    AnyElement, AnyView, Context, Div, InteractiveElement, IntoElement, ParentElement, Render,
+    ScrollWheelEvent, Styled, Window, div, px,
 };
 use twake_ui_kit::theme::Theme;
 use twake_ui_kit::view::hsla;
@@ -24,6 +24,9 @@ const NAME_HEIGHT: f32 = 18.0;
 const QUOTE_HEIGHT: f32 = 40.0;
 const DIVIDER_HEIGHT: f32 = 40.0;
 const AVATAR_SIZE: f32 = 32.0;
+/// Vertical padding of the bar that holds the footer, and its top border.
+const BAR_PADDING: f32 = 8.0;
+const BAR_BORDER: f32 = 1.0;
 const BENCH_FRAMES: usize = 600;
 const BENCH_STEP: f32 = 48.0;
 
@@ -105,6 +108,9 @@ pub struct TimelineView {
     stick_to_bottom: bool,
     theme: Theme,
     bench: Option<Bench>,
+    footer: Option<AnyView>,
+    footer_height: f32,
+    at_bottom: bool,
 }
 
 impl TimelineView {
@@ -118,7 +124,23 @@ impl TimelineView {
             stick_to_bottom: true,
             theme,
             bench: None,
+            footer: None,
+            footer_height: 0.0,
+            at_bottom: true,
         }
+    }
+
+    /// Shows `footer` (the composer, `height` pixels tall) in a bar under the list: a list at
+    /// its end stays at its end when the footer grows.
+    pub fn set_footer(&mut self, footer: AnyView, height: f32, cx: &mut Context<Self>) {
+        let height = height + 2.0 * BAR_PADDING + BAR_BORDER;
+        if self.footer.is_some() && height == self.footer_height {
+            return;
+        }
+        self.stick_to_bottom |= self.at_bottom;
+        self.footer = Some(footer);
+        self.footer_height = height;
+        cx.notify();
     }
 
     /// Shows another room, scrolled to its newest message.
@@ -163,6 +185,20 @@ impl TimelineView {
         } else {
             window.request_animation_frame();
         }
+    }
+
+    /// The bar under the list that holds the composer.
+    fn footer_bar(&self) -> Option<Div> {
+        let footer = self.footer.clone()?;
+        Some(
+            div()
+                .flex_none()
+                .px(px(16.0))
+                .py(px(BAR_PADDING))
+                .border_t_1()
+                .border_color(hsla(self.theme.colors().divider))
+                .child(footer),
+        )
     }
 
     fn slot(&self, position: usize) -> Option<AnyElement> {
@@ -308,13 +344,14 @@ impl Render for TimelineView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let started = Instant::now();
         let colors = self.theme.colors();
-        let height = viewport(window);
+        let height = viewport(window) - self.footer_height;
         let total = self.index.total_height();
         if self.stick_to_bottom {
             self.scroll_top = total;
             self.stick_to_bottom = false;
         }
         self.scroll_top = clamp(self.scroll_top, total, height);
+        self.at_bottom = self.scroll_top >= total - height - 1.0;
         let range = self.index.visible_range(self.scroll_top, height, OVERSCAN);
         let slots: Vec<AnyElement> = range.filter_map(|position| self.slot(position)).collect();
         self.follow_bench(window, height, started);
@@ -346,8 +383,8 @@ impl Render for TimelineView {
                     .on_scroll_wheel(cx.listener(
                         |this: &mut Self, event: &ScrollWheelEvent, window, cx| {
                             let total = this.index.total_height();
-                            this.scroll_top =
-                                scrolled(this.scroll_top, event, total, viewport(window));
+                            let height = viewport(window) - this.footer_height;
+                            this.scroll_top = scrolled(this.scroll_top, event, total, height);
                             cx.notify();
                         },
                     ))
@@ -361,5 +398,6 @@ impl Render for TimelineView {
                             .children(slots),
                     ),
             )
+            .children(self.footer_bar())
     }
 }

@@ -5982,10 +5982,12 @@ dependencies = [
 name = "twake-ui-kit"
 version = "0.1.0"
 dependencies = [
+ "proptest",
  "twake-domain",
  "twake-gpui",
  "twake-icons",
  "twake-tokens",
+ "unicode-segmentation",
 ]
 
 [[package]]

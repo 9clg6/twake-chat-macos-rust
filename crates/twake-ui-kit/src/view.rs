@@ -3,6 +3,13 @@
 
 use std::borrow::Cow;
 
+mod text_element;
+mod text_input;
+pub mod text_keys;
+mod text_layout;
+
+pub use text_input::{Submit, TextInput};
+
 use twake_gpui::{
     App, AssetSource, BoxShadow, ClickEvent, Component, FocusHandle, FontWeight, Hsla,
     InteractiveElement, IntoElement, ParentElement, RenderOnce, SharedString,
