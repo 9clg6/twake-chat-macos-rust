@@ -17,6 +17,7 @@ ignore = [
   { id = "RUSTSEC-2026-0370", reason = "unmaintained, transitive only: zvariant 5.15 <- zbus 5.19 / zbus_macros <- ashpd, oo7 <- gpui 0.2.2 (Linux portals); reviewed 2026-11-12 (A018)" },
   { id = "RUSTSEC-2026-0371", reason = "unmaintained, transitive only: zbus_names 4.3 <- zbus 5.19 <- ashpd, oo7 <- gpui 0.2.2 (Linux portals); reviewed 2026-11-12 (A018)" },
   { id = "RUSTSEC-2026-0372", reason = "unmaintained, transitive only: zvariant_derive 5.15 <- zvariant <- zbus <- ashpd, oo7 <- gpui 0.2.2 (Linux portals); reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2026-0319", reason = "unmaintained, transitive only: anymap2 0.13.0 <- matrix-sdk 0.19.1 (pinned, A003); reviewed 2026-11-12 (spike S2)" },
   { id = "RUSTSEC-2026-0441", reason = "unmaintained, transitive only: pin-utils 0.1.1 <- async-std <- zed-async-tar <- gpui_http_client <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
 ]
 
