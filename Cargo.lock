@@ -5785,6 +5785,8 @@ dependencies = [
 name = "twake-app"
 version = "0.1.0"
 dependencies = [
+ "futures",
+ "proptest",
  "twake-domain",
 ]
 
@@ -5890,6 +5892,7 @@ dependencies = [
 name = "twake-testing"
 version = "0.1.0"
 dependencies = [
+ "futures",
  "twake-app",
  "twake-domain",
 ]
