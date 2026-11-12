@@ -442,6 +442,25 @@ fn tokens_and_icons_pull_no_external_crate_in_particular_not_gpui() {
     );
 }
 
+#[test]
+fn an_external_dev_dependency_of_a_leaf_crate_is_not_a_violation() {
+    // Decision Q7 (docs/decisions.md A011): dev-dependencies are not counted
+    // against rule 3.
+    for krate in ["twake-tokens", "twake-icons"] {
+        let graph: Vec<CrateInfo> = valid_graph()
+            .into_iter()
+            .map(|c| {
+                if c.name == krate {
+                    c.dev_external("proptest")
+                } else {
+                    c
+                }
+            })
+            .collect();
+        assert_eq!(check(&rules(), &graph), vec![], "{krate}");
+    }
+}
+
 // ------------------------------------------------------------ hard rule 4: no cycle
 
 #[test]

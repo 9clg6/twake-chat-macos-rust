@@ -142,6 +142,10 @@ fn a_user_id_server_may_carry_a_port_an_ipv4_or_an_ipv6_literal() {
     );
     assert_eq!(UserId::parse("@a:[::1]").unwrap().server_name(), "[::1]");
     assert_eq!(
+        UserId::parse("@a:[::ffff:1.2.3.4]").unwrap().server_name(),
+        "[::ffff:1.2.3.4]"
+    );
+    assert_eq!(
         UserId::parse("@a:[2001:db8::1]:8448")
             .unwrap()
             .server_name(),
@@ -159,30 +163,34 @@ fn a_user_id_historical_uppercase_localpart_is_read_and_kept_as_received() {
 }
 
 #[test]
-fn a_user_id_rejects_what_is_not_one() {
+fn a_user_id_without_the_right_shape_is_refused() {
     assert_eq!(UserId::parse(""), Err(IdError::Empty));
     assert_eq!(UserId::parse("!room:example.org"), Err(IdError::WrongSigil));
     assert_eq!(UserId::parse("alice:example.org"), Err(IdError::WrongSigil));
     assert_eq!(UserId::parse("@alice"), Err(IdError::MissingServer));
     assert!(UserId::parse("@").is_err(), "sigil alone");
+}
+
+#[test]
+fn a_user_id_with_an_empty_part_is_refused() {
     assert!(UserId::parse("@:example.org").is_err(), "empty localpart");
     assert!(UserId::parse("@alice:").is_err(), "empty server");
-    assert!(
-        UserId::parse("@al ice:example.org").is_err(),
-        "space in localpart"
-    );
-    assert!(
-        UserId::parse("@alice:exam ple.org").is_err(),
-        "space in server"
-    );
-    assert!(
-        UserId::parse(" @alice:example.org").is_err(),
-        "leading space"
-    );
-    assert!(
-        UserId::parse("@alice:example.org ").is_err(),
-        "trailing space"
-    );
+}
+
+#[test]
+fn a_user_id_with_a_space_in_it_is_refused() {
+    for id in [
+        "@al ice:example.org",
+        "@alice:exam ple.org",
+        " @alice:example.org",
+        "@alice:example.org ",
+    ] {
+        assert!(UserId::parse(id).is_err(), "{id:?}");
+    }
+}
+
+#[test]
+fn a_user_id_with_a_control_character_or_a_second_sigil_is_refused() {
     assert!(UserId::parse("@ali\tce:example.org").is_err(), "tab");
     assert!(UserId::parse("@ali\0ce:example.org").is_err(), "NUL");
     assert!(
