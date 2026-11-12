@@ -118,11 +118,19 @@ fn functional(text: &str) -> Option<[u8; 4]> {
         return None;
     }
     let channel = |i: usize| parts[i].parse::<u8>().ok();
-    let alpha = match parts.get(3) {
-        Some(a) => (a.parse::<f64>().ok()? * 255.0).round() as u8,
-        None => 255,
-    };
-    Some([channel(0)?, channel(1)?, channel(2)?, alpha])
+    Some([
+        channel(0)?,
+        channel(1)?,
+        channel(2)?,
+        alpha(parts.get(3).copied())?,
+    ])
+}
+
+fn alpha(text: Option<&str>) -> Option<u8> {
+    match text {
+        Some(a) => Some((a.parse::<f64>().ok()? * 255.0).round() as u8),
+        None => Some(255),
+    }
 }
 
 fn color(text: &str) -> Res<String> {
@@ -207,12 +215,15 @@ fn struct_of(name: &str) -> &'static str {
     }
 }
 
+fn scheme_palette<'a>(mode: &str, raw: &'a Value) -> Res<&'a Map<String, Value>> {
+    match object(raw, &format!("scheme {mode}"))?.get("palette") {
+        Some(value) => object(value, &format!("scheme {mode} palette")),
+        None => fail(format!("scheme {mode} has no palette")),
+    }
+}
+
 fn scheme(mode: &str, raw: &Value) -> Res<String> {
-    let map = object(raw, &format!("scheme {mode}"))?;
-    let palette = match map.get("palette") {
-        Some(value) => object(value, &format!("scheme {mode} palette"))?,
-        None => return fail(format!("scheme {mode} has no palette")),
-    };
+    let palette = scheme_palette(mode, raw)?;
     let mut text = format!("pub const {}: Scheme = Scheme {{\n", mode.to_uppercase());
     for tone in TONES {
         text.push_str(&group(palette, tone, &TONE_KEYS, mode)?);
@@ -274,27 +285,47 @@ fn single(root: &Map<String, Value>, section: &str, key: &str, name: &str) -> Re
     }
 }
 
-fn type_spec(style: &str, raw: &Value) -> Res<String> {
-    let what = format!("typography {style}");
-    let map = object(raw, &what)?;
-    let field = |key: &str| match map.get(key) {
+fn need<'a>(map: &'a Map<String, Value>, key: &str, what: &str) -> Res<&'a Value> {
+    match map.get(key) {
         Some(value) => Ok(value),
         None => fail(format!("{what} has no {key}")),
-    };
-    let size = px(field("fontSize")?, &what)?;
-    let weight = match field("fontWeight")?.as_u64() {
-        Some(weight) => weight,
-        None => return fail(format!("{what}: fontWeight is not a whole number")),
-    };
-    let height = field("lineHeight")?;
+    }
+}
+
+fn line_height(height: &Value, what: &str) -> Res<String> {
     let kind = if height.is_string() { "Px" } else { "Ratio" };
-    let line = format!("LineHeight::{kind}({:?})", px(height, &what)?);
-    let spacing = match map.get("letterSpacing") {
-        Some(value) => px(value, &what)?,
-        None => 0.0,
-    };
+    Ok(format!("LineHeight::{kind}({:?})", px(height, what)?))
+}
+
+fn weight(value: &Value, what: &str) -> Res<u64> {
+    match value.as_u64() {
+        Some(weight) => Ok(weight),
+        None => fail(format!("{what}: fontWeight is not a whole number")),
+    }
+}
+
+fn spacing(value: Option<&Value>, what: &str) -> Res<f64> {
+    match value {
+        Some(value) => px(value, what),
+        None => Ok(0.0),
+    }
+}
+
+fn type_fields(map: &Map<String, Value>, what: &str) -> Res<String> {
+    let size = px(need(map, "fontSize", what)?, what)?;
+    let weight = weight(need(map, "fontWeight", what)?, what)?;
+    let line = line_height(need(map, "lineHeight", what)?, what)?;
+    let spacing = spacing(map.get("letterSpacing"), what)?;
     Ok(format!(
-        "pub const TYPE_{}: TypeSpec = TypeSpec {{\n    font_size: {size:?},\n    font_weight: {weight},\n    line_height: {line},\n    letter_spacing: {spacing:?},\n}};\n\n",
+        "    font_size: {size:?},\n    font_weight: {weight},\n    line_height: {line},\n    letter_spacing: {spacing:?},\n"
+    ))
+}
+
+fn type_spec(style: &str, raw: &Value) -> Res<String> {
+    let what = format!("typography {style}");
+    let fields = type_fields(object(raw, &what)?, &what)?;
+    Ok(format!(
+        "pub const TYPE_{}: TypeSpec = TypeSpec {{\n{fields}}};\n\n",
         style.to_uppercase()
     ))
 }
@@ -344,18 +375,15 @@ fn schemes(root: &Map<String, Value>) -> Res<String> {
     Ok(text)
 }
 
-/// The text of `generated.rs` for the text of `tokens.json`.
-pub fn generate(json: &str) -> Result<String, Error> {
-    let value: Value = match serde_json::from_str(json) {
-        Ok(value) => value,
-        Err(error) => return fail(format!("invalid JSON: {error}")),
-    };
-    let root = object(&value, "tokens.json")?;
-    let version = match root.get("twakeMuiVersion") {
-        Some(version) => string(version, "twakeMuiVersion")?,
-        None => return fail("tokens.json has no twakeMuiVersion".to_string()),
-    };
-    let body = [
+fn version(root: &Map<String, Value>) -> Res<&str> {
+    match root.get("twakeMuiVersion") {
+        Some(version) => string(version, "twakeMuiVersion"),
+        None => fail("tokens.json has no twakeMuiVersion".to_string()),
+    }
+}
+
+fn body(root: &Map<String, Value>) -> Res<String> {
+    Ok([
         palettes(root)?,
         schemes(root)?,
         single(root, "spacing", "unit", "SPACING")?,
@@ -364,7 +392,18 @@ pub fn generate(json: &str) -> Result<String, Error> {
         lengths(root, "breakpoints", &BREAKPOINTS, "BREAKPOINT_")?,
         typography(root)?,
     ]
-    .concat();
+    .concat())
+}
+
+/// The text of `generated.rs` for the text of `tokens.json`.
+pub fn generate(json: &str) -> Result<String, Error> {
+    let value: Value = match serde_json::from_str(json) {
+        Ok(value) => value,
+        Err(error) => return fail(format!("invalid JSON: {error}")),
+    };
+    let root = object(&value, "tokens.json")?;
+    let version = version(root)?;
+    let body = body(root)?;
     Ok(format!(
         "// @generated by `cargo xtask tokens` from docs/spec/tokens.json (twake-mui {version}). Do not edit.\n#![allow(missing_docs)]\n\nuse super::*;\n\n{}\n",
         body.trim_end()

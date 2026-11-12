@@ -75,7 +75,7 @@ absent -> `0.0`; `fontSize` number -> px.
 ## 2. `xtask::tokens` (library, module `xtask/src/tokens.rs`)
 
 ```rust
-pub struct Error;                      // Debug + PartialEq + Display (the message)
+pub struct Error(String);              // Debug + PartialEq + Display (the message)
 pub fn generate(json: &str) -> Result<String, Error>;
 ```
 

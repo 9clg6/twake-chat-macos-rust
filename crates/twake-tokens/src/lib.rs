@@ -41,6 +41,34 @@ const fn digit(byte: u8) -> Option<u8> {
     }
 }
 
+/// `(short, channel count)` of `#rgb`, `#rrggbb` or `#rrggbbaa`.
+const fn layout(bytes: &[u8]) -> Option<(bool, usize)> {
+    if bytes.is_empty() || bytes[0] != b'#' {
+        return None;
+    }
+    match bytes.len() {
+        4 => Some((true, 3)),
+        7 => Some((false, 3)),
+        9 => Some((false, 4)),
+        _ => None,
+    }
+}
+
+/// Channel `i` of `#rgb` (`short`) or of `#rrggbb[aa]`.
+const fn channel(bytes: &[u8], i: usize, short: bool) -> Option<u8> {
+    if short {
+        match digit(bytes[1 + i]) {
+            Some(d) => Some(d * 17),
+            None => None,
+        }
+    } else {
+        match (digit(bytes[1 + 2 * i]), digit(bytes[2 + 2 * i])) {
+            (Some(high), Some(low)) => Some(high * 16 + low),
+            _ => None,
+        }
+    }
+}
+
 impl Rgba8 {
     /// A colour from its four bytes.
     pub const fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
@@ -55,30 +83,16 @@ impl Rgba8 {
     /// Parses `#rgb` (each digit doubled), `#rrggbb` or `#rrggbbaa`, in either case.
     pub const fn from_hex(text: &str) -> Result<Self, ParseColorError> {
         let bytes = text.as_bytes();
-        let (short, count) = match bytes.len() {
-            4 => (true, 3),
-            7 => (false, 3),
-            9 => (false, 4),
-            _ => return Err(ParseColorError),
-        };
-        if bytes[0] != b'#' {
+        let Some((short, count)) = layout(bytes) else {
             return Err(ParseColorError);
-        }
+        };
         let mut out = [255u8; 4];
         let mut i = 0;
         while i < count {
-            let value = if short {
-                match digit(bytes[1 + i]) {
-                    Some(d) => d * 17,
-                    None => return Err(ParseColorError),
-                }
-            } else {
-                match (digit(bytes[1 + 2 * i]), digit(bytes[2 + 2 * i])) {
-                    (Some(high), Some(low)) => high * 16 + low,
-                    _ => return Err(ParseColorError),
-                }
+            out[i] = match channel(bytes, i, short) {
+                Some(value) => value,
+                None => return Err(ParseColorError),
             };
-            out[i] = value;
             i += 1;
         }
         Ok(Self::new(out[0], out[1], out[2], out[3]))

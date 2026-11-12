@@ -72,5 +72,6 @@ merged before the code that needs it. Product decisions of the React app keep th
 ## A012 Token generator: dependencies and spellings
 - Context: `cargo xtask tokens` turns `docs/spec/tokens.json` into `twake-tokens/src/generated.rs`; the tests were written before the code.
 - Decision: `serde_json` is a dev-dependency of `twake-tokens` (its tests read `tokens.json`; dev-dependencies do not count against rule 3, A011 Q7) and a normal dependency of `xtask` (a build tool, not a product crate). A shade is read with `PRIMARY.shade(600)`, not `PRIMARY[600]` (a lookup that can fail, `None` for any other number). The command takes `--input FILE` and `--output FILE` besides `--check`, for tests and for other token files.
+- Scope: not generated for now: shadows, zIndex, transitions, the accents of Grey, components and icons (all in `tokens.json`); the 1:1 copy of twake-mui will need them later.
 - Consequences: `twake-tokens` stays dependency-free; `generated.rs` is committed and CI runs `cargo xtask tokens --check`; the placeholder `THEME` is gone, `twake-desktop` reads `LIGHT`.
 - Risk: none beyond a stale `generated.rs`, which `--check` catches.
