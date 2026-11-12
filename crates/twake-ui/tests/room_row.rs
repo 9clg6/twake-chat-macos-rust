@@ -9,6 +9,7 @@
 //! - D247: pin = favourite. D86: an avatar draws initials; the colour is the same for the same room.
 //!
 //! Public items used are listed in `docs/dev/ui-screens-api-sketch.md`.
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
 
 mod common;
 

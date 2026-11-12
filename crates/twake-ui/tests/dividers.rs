@@ -7,6 +7,7 @@
 //! - The day is the calendar day of the reader; `Day` is the domain's.
 //!
 //! Public items used are listed in `docs/dev/ui-screens-api-sketch.md`.
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
 
 mod common;
 

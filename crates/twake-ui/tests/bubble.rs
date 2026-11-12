@@ -10,6 +10,7 @@
 //! - D523: the day dividers and the "New messages" marker end a run.
 //!
 //! Public items used are listed in `docs/dev/ui-screens-api-sketch.md` (grouping delay: open question 2).
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
 
 mod common;
 
@@ -122,7 +123,7 @@ fn the_avatar_is_the_one_of_the_author() {
 #[test]
 fn the_time_is_the_clock_of_the_reader() {
     let at_0905 = msg(say(1, "bob", 5 * 60_000));
-    assert_eq!(group(&[at_0905.clone()])[0].time, "09:05");
+    assert_eq!(group(&[at_0905])[0].time, "09:05");
     let late = Message::remote(event(2), user("bob"), at(2026, 11, 12, 23, 30), "late");
     let rows = timeline_rows(
         &[msg(late)],
