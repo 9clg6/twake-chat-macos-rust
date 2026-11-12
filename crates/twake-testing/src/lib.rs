@@ -6,6 +6,7 @@ mod fake_draft_store;
 mod fake_room_list;
 mod fake_session_store;
 mod fake_timeline;
+mod message_actions_contract;
 mod session_store_contract;
 mod subscribers;
 
