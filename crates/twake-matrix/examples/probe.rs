@@ -3,8 +3,8 @@
 #![recursion_limit = "256"] // matrix-sdk futures overflow the default layout depth of 128
 #![allow(missing_docs, clippy::unwrap_used, clippy::expect_used)]
 
-use matrix_sdk::Client;
 use matrix_sdk::authentication::matrix::MatrixSession;
+use matrix_sdk::{Client, SqliteStoreConfig};
 use matrix_sdk_ui::room_list_service::RoomListService;
 use matrix_sdk_ui::sync_service::{State, SyncService};
 use matrix_sdk_ui::timeline::RoomExt;
@@ -12,7 +12,11 @@ use matrix_sdk_ui::timeline::RoomExt;
 async fn build(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> {
     let client = Client::builder()
         .homeserver_url("https://localhost.invalid")
-        .sqlite_store(dir, Some("passphrase-from-keychain"))
+        // Raw 32-byte key (no KDF): fits the random keychain secret of section 7 better than a passphrase.
+        .sqlite_store_with_config_and_cache_path(
+            SqliteStoreConfig::new(dir).key(Some(&[7u8; 32])),
+            None::<&std::path::Path>,
+        )
         .build()
         .await?;
 
@@ -38,6 +42,7 @@ async fn build(dir: &std::path::Path) -> Result<(), Box<dyn std::error::Error>> 
 }
 
 fn main() {
-    // Reference only: not executed.
-    let _ = build;
+    // Keeps the code linked (for the binary size) without ever polling the future: no network, no I/O.
+    let fut = std::hint::black_box(build(std::path::Path::new("/nonexistent")));
+    drop(fut);
 }
