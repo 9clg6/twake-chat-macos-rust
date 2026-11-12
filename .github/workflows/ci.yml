@@ -35,7 +35,8 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --locked --workspace --all-targets -- -D warnings
       - run: cargo nextest run --locked --workspace --no-tests=pass
-      - run: cargo deny check
+      - if: runner.os == 'Linux'
+        run: cargo deny check
       - run: cargo audit
       - run: cargo build --locked --workspace
       - run: cargo run --locked -p xtask -- tokens --check
