@@ -299,3 +299,33 @@ fn the_local_theme_comes_back_when_the_common_theme_goes() {
     assert_eq!(s.view(&gone).scheme, ColorScheme::Dark);
     assert!(!s.view(&gone).appearance_locked);
 }
+
+// ---------------------------------------------------------------- the two account defaults (D22)
+
+#[test]
+fn the_direct_default_changes_alone() {
+    let mut s = fresh();
+    s.set_direct_messages(GlobalNotificationLevel::Mentions);
+    assert_eq!(
+        s.preferences(),
+        &Preferences {
+            direct_messages: GlobalNotificationLevel::Mentions,
+            ..Preferences::default()
+        }
+    );
+    assert!(s.is_dirty());
+}
+
+#[test]
+fn the_group_default_changes_alone() {
+    let mut s = fresh();
+    s.set_groups(GlobalNotificationLevel::Mentions);
+    assert_eq!(
+        s.preferences(),
+        &Preferences {
+            groups: GlobalNotificationLevel::Mentions,
+            ..Preferences::default()
+        }
+    );
+    assert!(s.is_dirty());
+}

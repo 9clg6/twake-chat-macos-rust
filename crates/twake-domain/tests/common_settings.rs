@@ -264,3 +264,23 @@ fn a_text_that_is_no_url_gives_no_link() {
     );
     assert_eq!(common_settings_url("", "@ana:s.org"), None);
 }
+
+#[test]
+fn the_characters_encodeuricomponent_keeps_stay_as_they_are() {
+    assert_eq!(
+        common_settings_url("https://h.example/{username}/x", "@a(b)*'!~-_.c:s.org"),
+        Some("https://h.example/a(b)*'!~-_.c/x".to_string())
+    );
+}
+
+#[test]
+fn the_link_is_the_normalized_url() {
+    assert_eq!(
+        common_settings_url("HTTPS://Settings.Example.org/{username}", "@ana:s.org"),
+        Some("https://settings.example.org/ana".to_string())
+    );
+    assert_eq!(
+        common_settings_url("https://h.example?u={username}", "@ana:s.org"),
+        Some("https://h.example/?u=ana".to_string())
+    );
+}

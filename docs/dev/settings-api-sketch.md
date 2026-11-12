@@ -95,7 +95,9 @@ impl SystemEnv {
 /// `commonSettingsUrlFor` of twakeServices.ts. `{username}` = the part of `user_id` between `@`
 /// and the first `:` (non empty), percent-encoded as `encodeURIComponent`, every occurrence
 /// replaced. None without the placeholder, without a username, if the result is no URL, or if
-/// its scheme is not http or https. Returns the normalized URL.
+/// its scheme is not http or https. Returns the normalized URL (`URL.href`: scheme and host in
+/// lower case, "/" for an empty path). `encodeURIComponent` keeps `A-Z a-z 0-9 - _ . ! ~ * ' ( )`
+/// and percent-encodes every other byte of the UTF-8 form.
 pub fn common_settings_url(template: &str, user_id: &str) -> Option<String>;
 
 /// Per kind of room (D22).
@@ -257,5 +259,16 @@ impl SettingsState {
 
 ## 5. Open questions
 
-See the report of the test author (gaps between PRD and React, `directMessages`/`groups` split,
-push-rule switches D85, bubble style, "reduced motion" as a setting).
+Rulings of the owner, applied above: "All" is firm; muted is "None" only; two account defaults
+(`direct_messages`, `groups`, values All|Mentions as in React); the common theme wins (D38).
+
+Open:
+- Common settings other than the theme. In the React code (`TomUserSettings.fetchSettings`,
+  `SharedSettings`) `user_info` gives `theme` (light|dark|auto) and `language` (D67: wins over the
+  device choice, `fr-FR` is French, an unsupported one counts as none, set aside and restored,
+  read for anyone). The well-known `app.twake.chat.common_settings` gives `enabled` and
+  `application_url` (the link). Nothing else is read. The language is not modelled here yet:
+  a `CommonSettings.language` would lock the picker the same way.
+- A `direct_messages`/`groups` that is invalid while the former `notifications` key is present
+  takes the former value (not the default); no test pins it.
+- Push-rule switches (D85), bubble style, "reduced motion" as a setting: not in this slice.
