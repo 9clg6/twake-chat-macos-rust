@@ -1,8 +1,9 @@
 //! Colour glue between `twake-tokens` bytes and GPUI floats.
-//! Need: docs/dev/ui-kit-api-sketch.md section 4; A010 (every GPUI type goes through `twake-gpui`).
+//! Need: docs/dev/ui-kit-api-sketch.md section 4 (module `color` of twake-ui-kit); A010 (every GPUI type goes through `twake-gpui`).
 
-use twake_gpui::{Rgba, from_gpui_rgba, to_gpui_rgba};
+use twake_gpui::Rgba;
 use twake_tokens::Rgba8;
+use twake_ui_kit::color::{from_gpui_rgba, to_gpui_rgba};
 
 fn close(left: f32, right: f32) -> bool {
     (left - right).abs() < 1e-6

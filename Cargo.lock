@@ -5830,7 +5830,6 @@ name = "twake-gpui"
 version = "0.1.0"
 dependencies = [
  "gpui",
- "twake-tokens",
 ]
 
 [[package]]

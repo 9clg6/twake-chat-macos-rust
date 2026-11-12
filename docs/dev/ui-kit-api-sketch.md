@@ -10,8 +10,8 @@ The pure half only: no window, no GPUI type in `twake-ui-kit` tests.
 
 Tests (all red: the modules do not exist yet, so they fail to compile):
 `crates/twake-ui-kit/tests/theme.rs`, `crates/twake-ui-kit/tests/button.rs`,
-`crates/twake-ui-kit/tests/icon.rs`, `crates/twake-gpui/tests/color.rs`.
-Dev-dependency added: `twake-tokens` in `twake-gpui` (the tests build `Rgba8`).
+`crates/twake-ui-kit/tests/icon.rs`, `crates/twake-ui-kit/tests/color.rs`.
+No dev-dependency added to `twake-gpui` (the colour glue lives in `twake-ui-kit`, section 4).
 
 ## 1. `twake_ui_kit::theme`
 
@@ -94,7 +94,10 @@ spelling: `20`, `14.5`), whatever the viewBox (the box scales with its aspect ke
 `fill="#rrggbbaa"` when alpha is not 255. The body is never touched. An icon whose body holds a hard-coded
 colour (`fill="#..."`, A013) is never recoloured: `svg_for` gives the same document for `Current` and `Fixed`.
 
-## 4. `twake_gpui` colour glue
+## 4. `twake_ui_kit::color` colour glue
+
+The module lives in `twake-ui-kit`, not in `twake-gpui`: the edge `twake-gpui -> twake-tokens` is forbidden by
+ARCHITECTURE.md. `Rgba` is `gpui::Rgba`, reached through the `twake_gpui::Rgba` re-export.
 
 ```rust
 pub fn to_gpui_rgba(color: Rgba8) -> Rgba;     // Rgba = gpui::Rgba, channels n / 255.0 in 0..=1
@@ -103,18 +106,15 @@ pub fn from_gpui_rgba(color: Rgba) -> Rgba8;   // channel * 255 rounded, clamped
 
 ## Open questions (the need is silent; the tests pin the proposal above)
 
-1. Pressed: MUI Button has no pressed colour (only a ripple). Tested equal to Hover. Say if the Rust
-   client wants a darker step.
+1. Pressed: decided, pressed == hover. MUI Button has no pressed colour (only a ripple), tested equal to Hover.
 2. Outlined small and large padding: not written in `tokens.json`; derived from the cascade order of
    `MuiButton` (size rules come after the variant ones): 16 x 9 and 32 x 13.
 3. The requested `ResolvedButton` had no field for the focus ring, which design-system.md 1.7 requires on
    every keyboard-reached control; `focus_ring` was added. The `color` argument was added to `resolve`
    (the request listed colours in the need but not in the signature).
 4. `twake-tokens` has no `action` colours (hover opacity, disabled, disabled background). The tests expect
-   the values of design-system.md lines 107-114 whatever their home: add them to `Scheme` through the
-   token generator, or hold them in `twake-ui-kit`.
+   the values of design-system.md lines 107-114 whatever their home. Decided (A014): the `action` colours
+   (hover, disabled, disabledBackground) are constants of `twake-ui-kit` for now.
 5. Disabled outlined border: twake sets `borderColor: currentColor`, MUI sets the disabled border to
    `action.disabledBackground`; the cascade is not decidable from the export. Not tested.
-6. ARCHITECTURE.md lets `twake-gpui` depend on `gpui*` and `tokio` only. `to_gpui_rgba` takes a
-   `twake_tokens::Rgba8`: it needs the edge `twake-gpui -> twake-tokens` (allowed for tests as a
-   dev-dependency, A011 Q7), or the functions live in `twake-ui-kit` instead.
+6. Settled: the functions live in `twake_ui_kit::color`, so `twake-gpui` needs no edge to `twake-tokens`.
