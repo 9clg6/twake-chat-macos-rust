@@ -40,7 +40,8 @@ const inlined = [], noViewBox = []
 let next = 0
 const note = {}
 for (const [, attrs, body] of symbols) {
-  const id = attr(attrs, 'id'), viewBox = attr(attrs, 'viewBox')
+  // kebab-case id (the source has carbonCopy)
+  const id = attr(attrs, 'id')?.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase(), viewBox = attr(attrs, 'viewBox')
   if (!id) fail('symbol without id')
   // ponytail: Icon's DEFAULT_SIZE is 16 and the standalone components carry no viewBox either
   if (!viewBox) noViewBox.push(id)
