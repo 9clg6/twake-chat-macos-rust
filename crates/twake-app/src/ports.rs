@@ -4,6 +4,7 @@
 use crate::composer::Draft;
 use futures::future::BoxFuture;
 use futures::stream::BoxStream;
+use twake_domain::preferences::Preferences;
 use twake_domain::room_list::RoomListDiff;
 use twake_domain::session::Session;
 use twake_domain::timeline::TimelineDiff;
@@ -106,6 +107,29 @@ pub trait DraftStorePort: Send + Sync {
 
     /// Forgets the draft of `room`; an unknown room is fine.
     fn clear(&self, room: RoomId) -> BoxFuture<'_, Result<(), DraftStoreError>>;
+}
+
+/// Why the preferences cannot be kept or read.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum PreferencesError {
+    /// The store cannot be reached.
+    #[error("the preferences are unavailable")]
+    Unavailable,
+}
+
+/// The preferences document, kept across restarts (FR-128).
+pub trait PreferencesPort: Send + Sync {
+    /// The stored document; `Preferences::default()` while nothing is stored.
+    fn load(&self) -> BoxFuture<'_, Result<Preferences, PreferencesError>>;
+
+    /// Replaces the whole document atomically: a reader sees the old or the new one, never a
+    /// mix. The last write wins.
+    fn save(&self, preferences: Preferences) -> BoxFuture<'_, Result<(), PreferencesError>>;
+
+    /// The current document first, then one item per real change (saving the stored value
+    /// notifies nothing). Each subscription is independent.
+    fn subscribe(&self)
+    -> BoxFuture<'_, Result<BoxStream<'static, Preferences>, PreferencesError>>;
 }
 
 /// Why an action on a message failed.
