@@ -24,6 +24,15 @@ pub enum RoomKind {
     Voice,
 }
 
+/// Who wrote the last message of a room.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LastSender {
+    /// The user.
+    Me,
+    /// Someone else, by display name (D596).
+    Other(String),
+}
+
 /// One row of the room list.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RoomSummary {
@@ -47,6 +56,10 @@ pub struct RoomSummary {
     pub is_low_priority: bool,
     /// The space it sits in.
     pub space: Option<RoomId>,
+    /// Who wrote the last message, when known.
+    pub last_sender: Option<LastSender>,
+    /// Notifications are off for this room.
+    pub is_muted: bool,
 }
 
 impl RoomSummary {
@@ -67,6 +80,8 @@ impl RoomSummary {
             is_favourite: false,
             is_low_priority: false,
             space: None,
+            last_sender: None,
+            is_muted: false,
         }
     }
 
@@ -103,6 +118,18 @@ impl RoomSummary {
     /// Lowers the room's priority.
     pub fn low_priority(mut self) -> Self {
         self.is_low_priority = true;
+        self
+    }
+
+    /// Sets who wrote the last message.
+    pub fn with_last_sender(mut self, sender: LastSender) -> Self {
+        self.last_sender = Some(sender);
+        self
+    }
+
+    /// Mutes the room.
+    pub fn muted(mut self) -> Self {
+        self.is_muted = true;
         self
     }
 

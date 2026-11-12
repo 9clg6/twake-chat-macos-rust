@@ -1,0 +1,19 @@
+# Twake Chat, English. Keys: docs/dev/ui-screens-api-sketch.md section 1.
+room-preview-you = You: { $text }
+room-preview-author = { $author }: { $text }
+time-yesterday = Yesterday
+weekday-short-mon = Mon
+weekday-short-tue = Tue
+weekday-short-wed = Wed
+weekday-short-thu = Thu
+weekday-short-fri = Fri
+weekday-short-sat = Sat
+weekday-short-sun = Sun
+date-short = { $month }/{ $day }/{ $year }
+time-12h = { $hour }:{ $minute } { $period }
+period-am = AM
+period-pm = PM
+day-today = Today
+day-yesterday = Yesterday
+new-messages = New messages
+message-edited = (edited)
