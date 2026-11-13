@@ -1,4 +1,4 @@
-//! Design tokens (colours, type, radii, breakpoints); GPUI-free and dependency-free.
+//! Design tokens (colours, type, radii, breakpoints, shadows, transitions, avatar gradients); GPUI-free and dependency-free.
 //! The constants come from `docs/spec/tokens.json` through `cargo xtask tokens` (`generated.rs`).
 
 use std::fmt;
@@ -171,6 +171,23 @@ pub struct BorderColors {
     pub ghost_disabled: Rgba8,
 }
 
+/// Colours of interaction states, as ink over a surface (alpha included).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ActionColors {
+    /// Active icons.
+    pub active: Rgba8,
+    /// Hovered surface.
+    pub hover: Rgba8,
+    /// Selected surface.
+    pub selected: Rgba8,
+    /// Disabled content.
+    pub disabled: Rgba8,
+    /// Disabled surface.
+    pub disabled_background: Rgba8,
+    /// Focused surface.
+    pub focus: Rgba8,
+}
+
 /// The colours of one scheme (light or dark).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Scheme {
@@ -192,8 +209,30 @@ pub struct Scheme {
     pub background: BackgroundColors,
     /// Border colours.
     pub border: BorderColors,
+    /// Interaction states.
+    pub action: ActionColors,
     /// Divider line.
     pub divider: Rgba8,
+}
+
+/// A colour of a gradient and where it sits on the line, in percent.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct GradientStop {
+    /// The colour.
+    pub color: Rgba8,
+    /// Position on the gradient line, in percent.
+    pub at_percent: f32,
+}
+
+/// A CSS `linear-gradient(<angle>deg, from, to)`: the angle is clockwise from "up".
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Gradient {
+    /// CSS angle in degrees.
+    pub angle_deg: f32,
+    /// First stop.
+    pub from: GradientStop,
+    /// Last stop.
+    pub to: GradientStop,
 }
 
 /// A line height: a multiple of the font size, or pixels.
