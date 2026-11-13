@@ -10,11 +10,13 @@ use twake_tokens::{LIGHT, Rgba8};
 use twake_ui_kit::view::IconAssets;
 
 mod gallery;
+mod gallery_parts;
 mod preview;
 mod preview_data;
 
 const APP_TITLE: &str = "Twake Chat";
 const WINDOW_SIZE: (f32, f32) = (1100.0, 720.0);
+const GALLERY_SIZE: (f32, f32) = (1800.0, 960.0);
 
 fn packed(color: Rgba8) -> u32 {
     u32::from(color.r) << 16 | u32::from(color.g) << 8 | u32::from(color.b)
@@ -45,7 +47,8 @@ fn main() {
     Application::new()
         .with_assets(IconAssets)
         .run(move |cx: &mut App| {
-            let bounds = Bounds::centered(None, size(px(WINDOW_SIZE.0), px(WINDOW_SIZE.1)), cx);
+            let (width, height) = if gallery { GALLERY_SIZE } else { WINDOW_SIZE };
+            let bounds = Bounds::centered(None, size(px(width), px(height)), cx);
             let options = WindowOptions {
                 window_bounds: Some(WindowBounds::Windowed(bounds)),
                 titlebar: Some(TitlebarOptions {
