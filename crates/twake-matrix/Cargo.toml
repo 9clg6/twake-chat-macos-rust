@@ -17,7 +17,7 @@ twake-domain = { path = "../twake-domain" }
 futures = "0.3"
 rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs"] }
 thiserror = "2.0.21"
-tokio = { version = "1", features = ["sync"] }
+tokio = { version = "1", features = ["sync", "rt", "time"] }
 
 [dev-dependencies]
 # `testing` brings MatrixMockServer (wiremock, matrix-sdk-test): an in-process mock homeserver, no network.
