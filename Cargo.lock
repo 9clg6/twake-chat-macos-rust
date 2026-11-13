@@ -8227,6 +8227,7 @@ dependencies = [
  "tokio",
  "twake-app",
  "twake-domain",
+ "twake-testing",
  "wiremock",
 ]
 

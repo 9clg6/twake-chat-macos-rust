@@ -7,6 +7,9 @@
     dead_code
 )]
 
+pub mod history;
+pub mod seed;
+
 use matrix_sdk::Client;
 use matrix_sdk::ruma::user_id;
 use matrix_sdk::test_utils::mocks::{LoginResponseTemplate200, MatrixMockServer};

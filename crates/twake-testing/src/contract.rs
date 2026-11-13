@@ -16,7 +16,7 @@ use futures::StreamExt;
 use futures::executor::block_on;
 use futures::stream::BoxStream;
 use twake_app::ports::{RoomListPort, TIMELINE_PAGE_SIZE, TimelineError, TimelinePort};
-use twake_domain::room_list::{RoomKind, RoomListDiff, RoomSummary};
+use twake_domain::room_list::{LastSender, RoomKind, RoomListDiff, RoomSummary};
 use twake_domain::timeline::{Message, SendState, TimelineDiff};
 use twake_domain::{EventId, RoomId, Timestamp, UserId};
 
@@ -59,6 +59,8 @@ fn seed_room(n: usize) -> RoomSummary {
     RoomSummary::new(room_id(n), format!("Contract room {n}"), RoomKind::Group)
         .with_last_activity(Timestamp::from_millis(1_000 + n as u64 * 7))
         .with_last_message_preview(format!("preview {n}"))
+        // A real server always knows who wrote the last event: the seed says so too.
+        .with_last_sender(LastSender::Other("Contract sender".into()))
 }
 
 fn by_id(mut rooms: Vec<RoomSummary>) -> Vec<RoomSummary> {
