@@ -383,6 +383,21 @@ fn footer(bubble: &BubbleView, _theme: Theme) -> impl IntoElement {
         .child(text)
 }
 
+fn header(title: &str, theme: Theme) -> impl IntoElement {
+    let colors = theme.colors();
+    div()
+        .flex()
+        .items_center()
+        .flex_none()
+        .h(px(HEADER_HEIGHT))
+        .px(px(16.0))
+        .bg(hsla(colors.background.paper))
+        .border_b_1()
+        .border_color(hsla(colors.divider))
+        .text_size(px(18.0))
+        .child(title.to_owned())
+}
+
 impl Render for TimelineView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let started = Instant::now();
@@ -410,19 +425,7 @@ impl Render for TimelineView {
             .min_w_0()
             .bg(hsla(wallpaper(&self.theme)))
             .text_color(hsla(colors.text.primary))
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .flex_none()
-                    .h(px(HEADER_HEIGHT))
-                    .px(px(16.0))
-                    .bg(hsla(colors.background.paper))
-                    .border_b_1()
-                    .border_color(hsla(colors.divider))
-                    .text_size(px(18.0))
-                    .child(self.title.clone()),
-            )
+            .child(header(&self.title, self.theme))
             .child(
                 div()
                     .relative()
