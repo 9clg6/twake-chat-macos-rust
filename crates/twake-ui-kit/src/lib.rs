@@ -10,6 +10,7 @@ pub mod icon;
 pub mod icon_button;
 pub mod menu;
 pub mod presence;
+pub mod shadow;
 pub mod text_buffer;
 pub mod theme;
 pub mod tooltip;
