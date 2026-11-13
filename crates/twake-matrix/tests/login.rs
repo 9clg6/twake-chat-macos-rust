@@ -134,8 +134,7 @@ async fn a_refused_token_is_an_invalid_token_and_leaks_nothing() {
 
     let refused = login_with_token(&client, &Secret::new(TOKEN), None)
         .await
-        .err()
-        .expect("refused");
+        .expect_err("refused");
 
     assert!(matches!(refused, LoginError::InvalidToken), "{refused:?}");
     let text = format!("{refused} | {refused:?}");
@@ -153,8 +152,7 @@ async fn a_server_failure_is_not_taken_for_a_bad_token() {
 
     let failed = login_with_token(&client, &Secret::new(TOKEN), None)
         .await
-        .err()
-        .expect("failed");
+        .expect_err("failed");
 
     assert!(matches!(failed, LoginError::Server), "{failed:?}");
     let text = format!("{failed} | {failed:?}");
@@ -177,8 +175,7 @@ async fn an_unreachable_server_is_reported_as_such_and_leaks_nothing() {
     )
     .await
     .expect("answers in time")
-    .err()
-    .expect("failed");
+    .expect_err("failed");
 
     assert!(matches!(failed, LoginError::Unreachable), "{failed:?}");
     let text = format!("{failed} | {failed:?}");

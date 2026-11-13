@@ -72,8 +72,7 @@ async fn a_store_does_not_open_with_another_key_and_the_error_shows_no_key() {
     drop(build_client(&home, dir.path(), &key(1)).await.unwrap());
     let refused = build_client(&home, dir.path(), &key(2))
         .await
-        .err()
-        .expect("refused");
+        .expect_err("refused");
     let text = format!("{refused} {refused:?}");
     assert!(
         !text.contains(key(1).expose()) && !text.contains(key(2).expose()),
@@ -98,8 +97,7 @@ async fn a_key_that_is_not_32_bytes_is_refused_without_echoing_it() {
         let dir = tempfile::tempdir().unwrap();
         let refused = build_client(&home, dir.path(), &Secret::new(bad))
             .await
-            .err()
-            .expect("refused");
+            .expect_err("refused");
         assert!(
             matches!(refused, ClientError::InvalidStoreKey),
             "{bad:?} gave {refused:?}"

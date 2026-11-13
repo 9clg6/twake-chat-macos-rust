@@ -87,10 +87,7 @@ async fn a_session_of_another_homeserver_is_refused_and_its_token_goes_nowhere()
     let mut other = saved_session(&server, "restored-token", "DEVICE1");
     other.homeserver = HomeserverUrl::parse("https://other.example.org").unwrap();
 
-    let refused = restore_session(&client, &other)
-        .await
-        .err()
-        .expect("refused");
+    let refused = restore_session(&client, &other).await.expect_err("refused");
 
     assert!(
         matches!(refused, RestoreError::WrongHomeserver),
