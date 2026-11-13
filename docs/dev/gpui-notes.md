@@ -1,4 +1,4 @@
-# GPUI 0.2.2 notes (first facts of spike S1)
+# GPUI notes (first facts of spike S1, seen on 0.2.2; "1.28" lines added on `gpui-unofficial` 1.28.1, A028)
 
 Seen while building `twake-ui-kit::view` and `twake-desktop --gallery` (2026-11-12, macOS, gpui 0.2.2).
 
@@ -57,3 +57,15 @@ Checked on screen in `--preview` (window captured with `screencapture -l <id>`, 
 - **Not checked**: a real IME with a candidate window (Japanese, Chinese): `bounds_for_range` is written for it (the candidate window should sit under the marked text) but no IME was driven; the caret inside a clause is not followed (A021). Emoji picker (Ctrl+Cmd+Space, `show_character_palette`) is not wired. No wheel scroll inside the field (the caret scrolls it). Drag after a double or triple click selects by characters, not by words or lines. VoiceOver reads nothing from the field yet (no accessibility node).
 - **Perf** (`TWAKE_PREVIEW_BENCH=1 --preview`, 600 frames scrolling the 10 043 rows with the composer under the thread, window on screen): `release-fast` frame ms p50 4.2, p95 4.5 and 4.7, p99 6.3 and 8.2, max 126.3 and 101.1 (first paint), 2 frames over 25 ms, row build p50 0.02 (2 runs); debug p50 4.2, p95 4.6, p99 5.3, max 463.7, 2 over 25 ms. Same as without the composer. The field itself allocates per frame: the shaped rows (`Vec<Row>`, `Vec<WrappedLine>`) and the text clone of the measure closure (a `SharedString`, so a reference count); only the composer is concerned, not the list. The text is copied into a `SharedString` once per edit, not per frame.
 - Side effect of the test: Cmd+C overwrote the clipboard of the machine with the test text.
+
+## Moving to `gpui-unofficial` 1.28.1 (A028, 2026-11-13, macOS 26)
+
+- **`twake_gpui::gpui_platform::application()` replaces `Application::new()`**: the platform is a separate crate.
+- **`gpui_platform` needs its `font-kit` feature on macOS.** Without it the build and the window work, layout is right,
+  but no glyph is drawn anywhere (`WARN gpui_macos: compiled without the font-kit feature, so no text will be rendered`,
+  visible only with a `log` logger: the app installs none). SVG icons and boxes still draw. `twake-gpui` enables it.
+- Renamed: `Component` to `ViewElement`, `ScrollWheelEvent` to `ScrollEvent`, `on_scroll_wheel` to `on_scroll` (the old
+  names are deprecated aliases for now). `BoxShadow` has a new field `inset`. `Window::focus(&handle, cx)` takes the `App`.
+- `gpui-unofficial` 1.28.1 pulls 142 more crates and no new licence; AccessKit, `wgpu` and Linux/Windows crates are in the
+  lockfile but not compiled on macOS (`cargo tree --target aarch64-apple-darwin`).
+- Accessibility: `docs/dev/gpui-a11y.md`.

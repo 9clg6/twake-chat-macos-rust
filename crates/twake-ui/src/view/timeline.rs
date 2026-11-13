@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use twake_gpui::{
     AnyElement, AnyView, BoxShadow, Context, Div, Hsla, InteractiveElement, IntoElement,
-    ParentElement, Render, ScrollWheelEvent, Styled, Window, div, point, px,
+    ParentElement, Render, ScrollEvent, Styled, Window, div, point, px,
 };
 use twake_ui_kit::theme::Theme;
 use twake_ui_kit::view::hsla;
@@ -347,6 +347,7 @@ fn bubble_body(bubble: &BubbleView, container_px: f32, theme: Theme) -> impl Int
             offset: point(px(0.0), px(1.0)),
             blur_radius: px(1.0),
             spread_radius: px(0.0),
+            inset: false,
         }])
         .text_color(hsla(style.text))
         .text_size(px(style.font_size_px))
@@ -447,14 +448,14 @@ impl Render for TimelineView {
                     .relative()
                     .flex_1()
                     .overflow_hidden()
-                    .on_scroll_wheel(cx.listener(
-                        |this: &mut Self, event: &ScrollWheelEvent, window, cx| {
+                    .on_scroll(
+                        cx.listener(|this: &mut Self, event: &ScrollEvent, window, cx| {
                             let total = this.index.total_height();
                             let height = viewport(window) - this.footer_height;
                             this.scroll_top = scrolled(this.scroll_top, event, total, height);
                             cx.notify();
-                        },
-                    ))
+                        }),
+                    )
                     .child(
                         div()
                             .absolute()

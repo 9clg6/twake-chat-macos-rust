@@ -281,7 +281,9 @@ impl Rules {
         let owner = EXCLUSIVE
             .iter()
             .find(|(prefix, _)| dep.starts_with(prefix))
-            .map(|(_, o)| *o);
+            .map(|(_, o)| *o)
+            // The republished gpui crates that do not start with `gpui` (`scheduler-gpui-unofficial`...).
+            .or_else(|| dep.ends_with("-gpui-unofficial").then_some("twake-gpui"));
         if PURE_CORE.contains(&krate)
             && (owner.is_some() || PURE_CORE_EXTERNAL_BANS.iter().any(|b| dep.starts_with(b)))
         {

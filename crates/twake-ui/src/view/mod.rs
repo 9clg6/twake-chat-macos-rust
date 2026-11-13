@@ -7,9 +7,7 @@ mod timeline;
 pub use room_list::{RoomListView, RoomSelected};
 pub use timeline::TimelineView;
 
-use twake_gpui::{
-    Div, FontWeight, ParentElement, ScrollWheelEvent, Styled, Window, div, px, white,
-};
+use twake_gpui::{Div, FontWeight, ParentElement, ScrollEvent, Styled, Window, div, px, white};
 use twake_ui_kit::avatar::{LABEL_WEIGHT, label_size_px};
 use twake_ui_kit::view::avatar_background;
 
@@ -44,7 +42,7 @@ pub(crate) fn viewport(window: &Window) -> f32 {
 }
 
 /// The scroll position after a wheel event, kept inside `0..=total - viewport`.
-pub(crate) fn scrolled(top: f32, event: &ScrollWheelEvent, total: f32, viewport: f32) -> f32 {
+pub(crate) fn scrolled(top: f32, event: &ScrollEvent, total: f32, viewport: f32) -> f32 {
     let delta = f32::from(event.delta.pixel_delta(px(WHEEL_LINE)).y);
     clamp(top - delta, total, viewport)
 }

@@ -9,4 +9,5 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-gpui = "0.2.2"
+gpui = { package = "gpui-unofficial", version = "=1.28.1" }
+gpui_platform = { package = "gpui-platform-gpui-unofficial", version = "=1.28.1", features = ["font-kit"] }
