@@ -16,6 +16,7 @@ use crate::icon::{IconColor, IconSpec};
 use crate::icon_button::{IconButtonColor, IconButtonSize, IconButtonState, IconButtonStyle};
 use crate::menu::{MenuItemState, MenuItemStyle, MenuStyle, SeparatorStyle};
 use crate::presence::PresenceDot;
+use crate::shadow::parse_shadow;
 use crate::theme::Theme;
 use crate::tooltip::TooltipStyle;
 
@@ -26,6 +27,7 @@ fn ring_shadow(ring: FocusRing) -> BoxShadow {
         offset: point(px(0.0), px(0.0)),
         blur_radius: px(0.0),
         spread_radius: px(ring.width_px),
+        inset: false,
     }
 }
 
@@ -37,6 +39,20 @@ pub(super) fn ringed<E: Styled>(base: E, ring: Option<FocusRing>) -> E {
             .border_color(hsla(ring.color)),
         None => base,
     }
+}
+
+/// The layers of a token shadow (`SHADOWS_*`) as GPUI shadows.
+fn token_shadow(css: &str) -> Vec<BoxShadow> {
+    parse_shadow(css)
+        .into_iter()
+        .map(|l| BoxShadow {
+            color: hsla(l.color),
+            offset: point(px(l.x_px), px(l.y_px)),
+            blur_radius: px(l.blur_px),
+            spread_radius: px(l.spread_px),
+            inset: false,
+        })
+        .collect()
 }
 
 fn glyph(icon_ref: &'static Icon, size_px: f32, color: Rgba8) -> impl IntoElement {
@@ -125,7 +141,6 @@ pub fn tooltip(text: &str, theme: &Theme) -> Div {
 /// The panel of a menu; add `menu_item`s and `menu_separator`s as children.
 pub fn menu_panel(theme: &Theme) -> Div {
     let s = MenuStyle::resolve(theme);
-    // The CSS shadow of the token is not parsed: GPUI's medium shadow stands in for it (A029).
     div()
         .flex()
         .flex_col()
@@ -133,7 +148,7 @@ pub fn menu_panel(theme: &Theme) -> Div {
         .max_w(px(s.max_width_px))
         .rounded(px(s.radius_px))
         .bg(hsla(s.background))
-        .shadow_md()
+        .shadow(token_shadow(s.shadow))
 }
 
 /// One row of a menu in one state; the icon is optional.
@@ -191,7 +206,7 @@ pub fn dialog(
         .w(px(s.max_width_px.unwrap_or(window_px - 2.0 * s.margin_px)))
         .rounded(px(s.radius_px))
         .bg(hsla(s.background))
-        .shadow_xl()
+        .shadow(token_shadow(s.shadow))
         .child(
             typed(div(), s.title.font)
                 .px(px(s.title.padding_x_px))

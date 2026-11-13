@@ -221,12 +221,13 @@ impl RenderOnce for Button {
             .active(move |style| style.bg(hsla(pressed.background)));
         if let (Some(handle), Some(ring)) = (self.focus.as_ref(), ring) {
             base = base.track_focus(handle).focus(move |style| {
+                // Inset: an outer spread would show through a translucent fill and overflow the box.
                 style.shadow(vec![BoxShadow {
                     color: hsla(ring.color),
                     offset: point(px(0.0), px(0.0)),
                     blur_radius: px(0.0),
                     spread_radius: px(ring.width_px),
-                    inset: false,
+                    inset: true,
                 }])
             });
         }
