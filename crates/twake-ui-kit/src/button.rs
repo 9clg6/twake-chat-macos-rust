@@ -4,7 +4,7 @@
 
 use twake_tokens::{LineHeight, Rgba8, TYPE_BUTTON, Tone, TypeSpec};
 
-use crate::theme::{ColorScheme, Theme};
+use crate::theme::Theme;
 
 /// How the button is filled.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -99,11 +99,6 @@ pub struct ResolvedButton {
     pub opacity: f32,
 }
 
-// `action` colours of design-system.md lines 107-114 (A014): the ink of light, white of dark.
-const INK: (u8, u8, u8) = (66, 66, 68);
-const HOVER_ALPHA: (u8, u8) = (10, 20);
-const DISABLED_ALPHA: (u8, u8) = (61, 82);
-const DISABLED_BACKGROUND_ALPHA: u8 = 31;
 const FOCUS_RING_PX: f32 = 2.0;
 const RADIUS_PX: f32 = 100.0;
 const XSMALL_FONT: TypeSpec = TypeSpec {
@@ -119,20 +114,6 @@ fn tone_of(color: ButtonColor, theme: &Theme) -> Tone {
         ButtonColor::Primary => scheme.primary,
         ButtonColor::Secondary => scheme.secondary,
         ButtonColor::Error => scheme.error,
-    }
-}
-
-fn action_ink(theme: &Theme, alpha: u8) -> Rgba8 {
-    match theme.scheme {
-        ColorScheme::Light => Rgba8::new(INK.0, INK.1, INK.2, alpha),
-        ColorScheme::Dark => Rgba8::new(255, 255, 255, alpha),
-    }
-}
-
-fn pick(theme: &Theme, (light, dark): (u8, u8)) -> u8 {
-    match theme.scheme {
-        ColorScheme::Light => light,
-        ColorScheme::Dark => dark,
     }
 }
 
@@ -173,17 +154,20 @@ fn colors(
     let filled = variant == ButtonVariant::Contained;
     if disabled {
         let background = if filled {
-            action_ink(theme, DISABLED_BACKGROUND_ALPHA)
+            theme.colors().action.disabled_background
         } else {
             with_alpha(tone.main, 0)
         };
-        return (background, action_ink(theme, pick(theme, DISABLED_ALPHA)));
+        return (background, theme.colors().action.disabled);
     }
     match (filled, hovered) {
         (true, false) => (tone.main, tone.contrast_text),
         (true, true) => (tone.dark, tone.contrast_text),
         (false, false) => (with_alpha(tone.main, 0), tone.main),
-        (false, true) => (with_alpha(tone.main, pick(theme, HOVER_ALPHA)), tone.main),
+        (false, true) => (
+            with_alpha(tone.main, theme.colors().action.hover.a),
+            tone.main,
+        ),
     }
 }
 
