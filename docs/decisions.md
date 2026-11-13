@@ -177,3 +177,17 @@ merged before the code that needs it. Product decisions of the React app keep th
   4. Repository licence: MIT (`LICENSE`).
 - Consequences: `cargo deny` stays green with matrix-sdk in the graph; the patch is reviewed at each matrix-sdk bump.
 - Review: matrix-sdk bump (drop the ignore when rusqlite >= 0.41), any new ignore.
+
+## A027 Matrix session adapter and keychain store: store key, one entry, login errors, sign-out
+- Context: `twake-matrix` (`build_client`, `login_with_token`, `restore_session`, `sign_out`, `expiry`) and `twake-store` (`KeychainSessionStore`) of the branch `feat/matrix-session`; tests in `crates/twake-matrix/tests/{login,restore,sign_out,client}.rs` and `crates/twake-store/tests/keychain_session_store.rs`.
+- Decision:
+  1. The key of the SQLite store is 64 hexadecimal characters (32 bytes), per account.
+  2. The keychain holds one entry, `sessions`, with one line per session (`user device homeserver token`); one entry keeps the order of the accounts and makes each change atomic. `save` refuses, before writing, a token that is empty or holds whitespace (Unicode included) or a control character: `SessionStoreError::Unavailable`, the saved sessions untouched.
+  3. `restore_session` refuses a session whose homeserver is not the one of the client: `RestoreError::WrongHomeserver`.
+  4. Login errors: a refused token (a Matrix error kind) is `InvalidToken`; a 5xx, a rate limit, a 4xx without a Matrix body and any other answer is `Server`; only a transport failure (no HTTP status, e.g. closed port) is `Unreachable`.
+  5. `sign_out(client, root, user)` derives the folder itself, `account_data_dir(root, user)`, and removes only that; a symbolic link in its place is removed, never followed. The server is asked once; the local data goes even if it cannot answer.
+- Still open:
+  1. Maximum size of a Windows Credential Manager entry against 5 sessions in one entry.
+  2. Deleting the store folder while a client is still open is not checked on Windows.
+  3. The real keychain adapter is spike S3; only the `Keychain` trait and a memory fake exist.
+- Consequences: a caller never passes a path to `sign_out`; the keychain entry is cleared by the caller through `SessionStorePort`.

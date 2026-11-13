@@ -72,10 +72,10 @@ Arrow = "MAY depend on". An internal edge not listed is forbidden.
 |---|---|---|
 | `twake-domain` | Ids, `RoomSummary`, `MessageVm`, read state, power levels, search query, errors. Pure. | std, `serde`, `serde_json`, `url`, `unicode-normalization`, `thiserror`, `imbl` |
 | `twake-app` | Use cases grouped as the web `ChatApp` (`rooms`, `messages`, `threads`, `encryption`, `calls`…) and the **port traits**. | `twake-domain` |
-| `twake-matrix` | Adapter over `matrix-sdk` / `matrix-sdk-ui`: sync, room list, timeline, crypto, SQLite store, SSO login. Produces domain snapshots and diffs. | `twake-app`, `twake-domain`, `matrix-sdk*`, `tokio` |
+| `twake-matrix` | Adapter over `matrix-sdk` / `matrix-sdk-ui`: sync, room list, timeline, crypto, SQLite store, SSO login. Produces domain snapshots and diffs. | `twake-app`, `twake-domain`, `matrix-sdk*`, `futures`, `thiserror`, `tokio` (`sync`), `rustls` (`aws_lc_rs`); dev: `wiremock`, `tempfile`, `serde_json` |
 | `twake-services` | HTTP adapters: ToM, side service (assistants, suggestions, analytics), Meet REST, GIF proxy. | `twake-app`, `twake-domain`, `reqwest` (rustls) |
 | `twake-media` | Scheduling, decode off-thread, thumbnails, pixel-budget cache, waveform. Gets bytes through the `Media` port (`twake-app`); never does HTTP itself. | `twake-app`, `twake-domain`, `image` |
-| `twake-store` | `SecretStore` over `keyring-core`, preferences file, store-passphrase generation. | `twake-app`, `twake-domain`, `keyring-core`, `zeroize` |
+| `twake-store` | `SecretStore` over `keyring-core`, preferences file, store-passphrase generation. | `twake-app`, `twake-domain`, `futures`, `thiserror`, `keyring-core`, `zeroize`; dev: `twake-testing` |
 | `twake-platform` | Notifications, deep links, single instance, tray, badge, accent colour. `cfg(target_os)` modules. | `twake-app`, `twake-domain` |
 | `twake-calls` | MatrixRTC signalling + LiveKit media. Optional (`calls` feature). | `twake-app`, `twake-domain`, `livekit` |
 | `twake-i18n` | `Translator`, Fluent bundles, locale detection, plural rules. | `twake-domain` |
