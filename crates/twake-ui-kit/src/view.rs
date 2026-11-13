@@ -11,10 +11,10 @@ mod text_layout;
 pub use text_input::{Submit, TextInput};
 
 use twake_gpui::{
-    App, AssetSource, Background, BoxShadow, ClickEvent, Component, FocusHandle, FontWeight, Hsla,
+    App, AssetSource, Background, BoxShadow, ClickEvent, FocusHandle, FontWeight, Hsla,
     InteractiveElement, IntoElement, ParentElement, RenderOnce, SharedString,
-    StatefulInteractiveElement, Styled, Svg, Window, div, linear_color_stop, linear_gradient,
-    point, px, svg,
+    StatefulInteractiveElement, Styled, Svg, ViewElement, Window, div, linear_color_stop,
+    linear_gradient, point, px, svg,
 };
 use twake_icons::by_id;
 use twake_tokens::{Gradient, GradientStop, LineHeight, Rgba8};
@@ -159,10 +159,10 @@ fn line_height(font_size: f32, height: LineHeight) -> f32 {
 
 // `#[derive(IntoElement)]` names the `gpui` crate, which only `twake-gpui` may depend on (A010).
 impl IntoElement for Button {
-    type Element = Component<Self>;
+    type Element = ViewElement<Self>;
 
     fn into_element(self) -> Self::Element {
-        Component::new(self)
+        ViewElement::new(self)
     }
 }
 
@@ -214,6 +214,7 @@ impl RenderOnce for Button {
                     offset: point(px(0.0), px(0.0)),
                     blur_radius: px(0.0),
                     spread_radius: px(ring.width_px),
+                    inset: false,
                 }])
             });
         }

@@ -3,8 +3,8 @@
 use gallery::Gallery;
 use preview::Preview;
 use twake_gpui::{
-    App, Application, Bounds, Context, IntoElement, Render, TitlebarOptions, Window,
-    WindowAppearance, WindowBounds, WindowOptions, div, prelude::*, px, rgb, size,
+    App, Bounds, Context, IntoElement, Render, TitlebarOptions, Window, WindowAppearance,
+    WindowBounds, WindowOptions, div, prelude::*, px, rgb, size,
 };
 use twake_tokens::{LIGHT, Rgba8};
 use twake_ui_kit::view::IconAssets;
@@ -42,7 +42,7 @@ fn main() {
     let gallery = std::env::args().any(|arg| arg == "--gallery");
     let preview = std::env::args().any(|arg| arg == "--preview");
     let bench = std::env::var_os("TWAKE_PREVIEW_BENCH").is_some();
-    Application::new()
+    twake_gpui::gpui_platform::application()
         .with_assets(IconAssets)
         .run(move |cx: &mut App| {
             let bounds = Bounds::centered(None, size(px(WINDOW_SIZE.0), px(WINDOW_SIZE.1)), cx);
