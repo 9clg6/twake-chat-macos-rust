@@ -167,3 +167,13 @@ merged before the code that needs it. Product decisions of the React app keep th
   4. The domain knows 7 languages (`SUPPORTED_LANGUAGES`) while `twake-i18n` embeds 2: the others fall back until their catalogues exist.
   5. `ColorScheme` and `HourCycle` exist here and in `twake-ui-kit`; the UI converts between them.
 - Consequences: a Settings screen reads `SettingsState::view(&SystemEnv)` and nothing else; changing a deviation is a change of the tests first.
+
+## A025 Decisions of 2026-11-13: SQLite advisory, gpui-unofficial, licences
+- Context: five open points were put to the owner (see A018, A019, A022).
+- Decision:
+  1. RUSTSEC-2026-0459 (`libsqlite3-sys` 0.38.2: SQLite before 3.54.0 returns uninitialised memory when a database is opened with a `-wal` of another page size) is fixed, not accepted. Without a patch the build linked the system SQLite (3.51.0 on the owner's Mac, also below 3.54.0). `vendor/libsqlite3-sys` is 0.38.2 with the `sqlite3/` sources of 0.39.1 (SQLite 3.54.1), wired by `[patch.crates-io]` and the `bundled` feature on `twake-matrix`; a throw-away binary built on it printed `sqlite3_libversion()` = 3.54.1. Cost: 11 MB vendored. The advisory is still listed in `deny.toml` because it reads the crate version (0.38.2), with that reason. Remove the patch, the vendor folder and the ignore when `matrix-sdk-sqlite` moves to `rusqlite` >= 0.41.
+  2. `gpui-unofficial =1.28.1` adopted behind `twake-gpui` (A022 accepted), re-diffed against the Zed tag at each bump.
+  3. `CDLA-Permissive-2.0` (`webpki-root-certs`, the Mozilla CA list) and `NCSA` (`libfuzzer-sys`) are allowed for those two crates only. Both are permissive: commercial use allowed, the notice or licence text is kept. Linagora's own legal policy was not checked: owner to confirm.
+  4. Repository licence: MIT (`LICENSE`).
+- Consequences: `cargo deny` stays green with matrix-sdk in the graph; the patch is reviewed at each matrix-sdk bump.
+- Review: matrix-sdk bump (drop the ignore when rusqlite >= 0.41), any new ignore.

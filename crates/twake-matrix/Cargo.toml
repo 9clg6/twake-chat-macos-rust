@@ -9,5 +9,8 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+matrix-sdk = { version = "=0.19.1", default-features = false, features = ["e2e-encryption", "automatic-room-key-forwarding", "sqlite", "rustls-aws-lc-rs"] }
+matrix-sdk-ui = { version = "=0.19.1", default-features = false, features = ["rustls-aws-lc-rs"] }
+libsqlite3-sys = { version = "0.38.2", features = ["bundled"] }
 twake-app = { path = "../twake-app" }
 twake-domain = { path = "../twake-domain" }
