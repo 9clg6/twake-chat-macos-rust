@@ -59,8 +59,14 @@ fn a_dialog_is_a_paper_with_a_6px_radius_and_the_elevation_24_shadow() {
 // overrides.js:451-453: black at 12 % (light), 50 % (dark); 0.12 * 255 = 30.6 -> 31, 0.5 * 255 -> 128.
 #[test]
 fn the_backdrop_is_black_at_12_percent_in_light_and_50_percent_in_dark() {
-    assert_eq!(r(Medium, DESKTOP, &light()).backdrop, Rgba8::new(0, 0, 0, 31));
-    assert_eq!(r(Medium, DESKTOP, &dark()).backdrop, Rgba8::new(0, 0, 0, 128));
+    assert_eq!(
+        r(Medium, DESKTOP, &light()).backdrop,
+        Rgba8::new(0, 0, 0, 31)
+    );
+    assert_eq!(
+        r(Medium, DESKTOP, &dark()).backdrop,
+        Rgba8::new(0, 0, 0, 128)
+    );
 }
 
 // Dialog.js:115 margin 32, :131 `calc(100% - 64px)`.
@@ -90,7 +96,14 @@ fn the_content_has_24px_above_32px_aside_and_nothing_below() {
 #[test]
 fn the_actions_have_a_16_by_32_margin_and_4px_between_buttons() {
     let d = r(Medium, DESKTOP, &light());
-    assert_eq!((d.actions_margin_x_px, d.actions_margin_y_px, d.actions_gap_px), (32.0, 16.0, 4.0));
+    assert_eq!(
+        (
+            d.actions_margin_x_px,
+            d.actions_margin_y_px,
+            d.actions_gap_px
+        ),
+        (32.0, 16.0, 4.0)
+    );
 }
 
 // overrides.js:743-755: `dialogIconButton` top / right `1.15rem` = 18.4 px (0.25rem = 4 px below md).

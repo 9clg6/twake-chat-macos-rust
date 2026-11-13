@@ -17,7 +17,10 @@ use ButtonState::{Disabled, FocusVisible, Hover, Pressed, Rest};
 use ButtonVariant::{Contained, Ghost, Outlined, Text};
 
 fn themes() -> [Theme; 2] {
-    [Theme::new(ColorScheme::Light), Theme::new(ColorScheme::Dark)]
+    [
+        Theme::new(ColorScheme::Light),
+        Theme::new(ColorScheme::Dark),
+    ]
 }
 
 /// CSS alpha `f` as the byte of `Rgba8` (rounded, as the generated `action.*` are).
@@ -41,7 +44,13 @@ fn tone(color: ButtonColor, theme: &Theme) -> Tone {
     }
 }
 
-fn r(v: ButtonVariant, c: ButtonColor, s: ButtonSize, st: ButtonState, t: &Theme) -> ResolvedButton {
+fn r(
+    v: ButtonVariant,
+    c: ButtonColor,
+    s: ButtonSize,
+    st: ButtonState,
+    t: &Theme,
+) -> ResolvedButton {
     ButtonStyle::resolve(v, c, s, st, t)
 }
 
@@ -114,7 +123,10 @@ fn a_disabled_ghost_is_transparent_with_a_faint_border() {
             assert_eq!(b.background.a, 0, "{color:?}");
             assert_eq!(
                 b.border,
-                Some(Border { width_px: 1.0, color: t.colors().action.disabled_background })
+                Some(Border {
+                    width_px: 1.0,
+                    color: t.colors().action.disabled_background
+                })
             );
             assert_eq!(b.foreground, t.colors().action.disabled);
         }
@@ -138,7 +150,10 @@ fn success_warning_info_contained_buttons_use_their_tone() {
         for color in [Success, Warning, Info] {
             let tn = tone(color, &t);
             let rest = r(Contained, color, Medium, Rest, &t);
-            assert_eq!((rest.background, rest.foreground), (tn.main, tn.contrast_text));
+            assert_eq!(
+                (rest.background, rest.foreground),
+                (tn.main, tn.contrast_text)
+            );
             let hover = r(Contained, color, Medium, Hover, &t);
             assert_eq!(hover.background, tn.dark);
         }
@@ -156,7 +171,13 @@ fn success_warning_info_outlined_and_text_buttons_are_written_in_their_main_colo
                 assert_eq!(b.background.a, 0);
             }
             let o = r(Outlined, color, Medium, Rest, &t);
-            assert_eq!(o.border, Some(Border { width_px: 1.0, color: main }));
+            assert_eq!(
+                o.border,
+                Some(Border {
+                    width_px: 1.0,
+                    color: main
+                })
+            );
         }
     }
 }

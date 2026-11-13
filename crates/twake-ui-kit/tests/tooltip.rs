@@ -15,7 +15,10 @@ use twake_ui_kit::theme::{ColorScheme, Theme};
 use twake_ui_kit::tooltip::TooltipStyle;
 
 fn themes() -> [Theme; 2] {
-    [Theme::new(ColorScheme::Light), Theme::new(ColorScheme::Dark)]
+    [
+        Theme::new(ColorScheme::Light),
+        Theme::new(ColorScheme::Dark),
+    ]
 }
 
 // overrides.js:1183 `alpha(theme.palette.grey[800], 0.9)`: `palette`, not `vars`, so the same in
@@ -23,7 +26,10 @@ fn themes() -> [Theme; 2] {
 #[test]
 fn the_background_is_grey_800_at_90_percent_in_both_schemes() {
     for t in themes() {
-        assert_eq!(TooltipStyle::resolve(&t).background, Rgba8::new(78, 80, 82, 230));
+        assert_eq!(
+            TooltipStyle::resolve(&t).background,
+            Rgba8::new(78, 80, 82, 230)
+        );
     }
 }
 
@@ -31,7 +37,10 @@ fn the_background_is_grey_800_at_90_percent_in_both_schemes() {
 #[test]
 fn the_text_is_white_in_both_schemes() {
     for t in themes() {
-        assert_eq!(TooltipStyle::resolve(&t).text, Rgba8::new(255, 255, 255, 255));
+        assert_eq!(
+            TooltipStyle::resolve(&t).text,
+            Rgba8::new(255, 255, 255, 255)
+        );
     }
 }
 
@@ -48,7 +57,10 @@ fn it_has_a_4px_radius_13px_text_and_4_by_8_padding() {
 #[test]
 fn it_is_medium_weight_with_a_line_height_of_1_3_and_300px_at_most() {
     let s = TooltipStyle::resolve(&themes()[0]);
-    assert_eq!((s.line_height_ratio, s.font_weight, s.max_width_px), (1.3, 500, 300.0));
+    assert_eq!(
+        (s.line_height_ratio, s.font_weight, s.max_width_px),
+        (1.3, 500, 300.0)
+    );
 }
 
 // Tooltip.js:144 (top placement `marginBottom: 14px`, kept with an arrow); theme.ts:187 `placement: 'top'`;

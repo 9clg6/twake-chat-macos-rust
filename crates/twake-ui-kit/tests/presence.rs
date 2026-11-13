@@ -9,14 +9,24 @@ use twake_ui_kit::presence::{PresenceDot, PresenceState};
 use twake_ui_kit::theme::{ColorScheme, Theme};
 
 fn themes() -> [Theme; 2] {
-    [Theme::new(ColorScheme::Light), Theme::new(ColorScheme::Dark)]
+    [
+        Theme::new(ColorScheme::Light),
+        Theme::new(ColorScheme::Dark),
+    ]
 }
 
 // PresenceBadge.tsx:25: `size > 40 ? 12 : 10`.
 #[test]
 fn the_dot_is_10px_up_to_a_40px_avatar_and_12px_beyond() {
     let t = &themes()[0];
-    for (avatar, dot) in [(16.0, 10.0), (32.0, 10.0), (40.0, 10.0), (40.5, 12.0), (48.0, 12.0), (64.0, 12.0)] {
+    for (avatar, dot) in [
+        (16.0, 10.0),
+        (32.0, 10.0),
+        (40.0, 10.0),
+        (40.5, 12.0),
+        (48.0, 12.0),
+        (64.0, 12.0),
+    ] {
         let d = PresenceDot::resolve(Some(PresenceState::Online), avatar, t).expect("dot");
         assert_eq!(d.diameter_px, dot, "avatar {avatar}");
     }
@@ -37,7 +47,10 @@ fn online_is_success_and_away_is_warning() {
 #[test]
 fn offline_and_unknown_presence_show_no_dot() {
     for t in themes() {
-        assert_eq!(PresenceDot::resolve(Some(PresenceState::Offline), 48.0, &t), None);
+        assert_eq!(
+            PresenceDot::resolve(Some(PresenceState::Offline), 48.0, &t),
+            None
+        );
         assert_eq!(PresenceDot::resolve(None, 48.0, &t), None);
     }
 }

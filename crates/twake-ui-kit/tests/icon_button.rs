@@ -21,7 +21,10 @@ use IconButtonSize::{Large, Medium, Small, XSmall};
 use IconButtonState::{Disabled, FocusVisible, Hover, Pressed, Rest};
 
 fn themes() -> [Theme; 2] {
-    [Theme::new(ColorScheme::Light), Theme::new(ColorScheme::Dark)]
+    [
+        Theme::new(ColorScheme::Light),
+        Theme::new(ColorScheme::Dark),
+    ]
 }
 
 fn r(s: IconButtonSize, c: IconButtonColor, st: IconButtonState, t: &Theme) -> ResolvedIconButton {
@@ -33,7 +36,10 @@ fn r(s: IconButtonSize, c: IconButtonColor, st: IconButtonState, t: &Theme) -> R
 fn paddings_are_5_8_12_16_by_size() {
     let t = &themes()[0];
     let p = |s| r(s, Default, Rest, t).padding_px;
-    assert_eq!((p(XSmall), p(Small), p(Medium), p(Large)), (5.0, 8.0, 12.0, 16.0));
+    assert_eq!(
+        (p(XSmall), p(Small), p(Medium), p(Large)),
+        (5.0, 8.0, 12.0, 16.0)
+    );
 }
 
 #[test]
@@ -79,11 +85,18 @@ fn hover_and_press_fill_the_default_button_with_action_hover() {
 fn a_coloured_icon_button_is_written_in_its_main_and_hovers_in_a_tint_of_it() {
     for t in themes() {
         let s = t.colors();
-        for (c, main) in [(Primary, s.primary.main), (Secondary, s.secondary.main), (Error, s.error.main)] {
+        for (c, main) in [
+            (Primary, s.primary.main),
+            (Secondary, s.secondary.main),
+            (Error, s.error.main),
+        ] {
             let rest = r(Medium, c, Rest, &t);
             assert_eq!((rest.foreground, rest.background.a), (main, 0));
             let hover = r(Medium, c, Hover, &t);
-            assert_eq!(hover.background, Rgba8::new(main.r, main.g, main.b, s.action.hover.a));
+            assert_eq!(
+                hover.background,
+                Rgba8::new(main.r, main.g, main.b, s.action.hover.a)
+            );
             assert_eq!(hover.foreground, main);
         }
     }

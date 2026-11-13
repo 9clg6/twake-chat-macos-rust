@@ -23,7 +23,10 @@ use twake_ui_kit::theme::{ColorScheme, Theme};
 use MenuItemState::{Disabled, FocusVisible, Hover, Rest, Selected, SelectedHover};
 
 fn themes() -> [Theme; 2] {
-    [Theme::new(ColorScheme::Light), Theme::new(ColorScheme::Dark)]
+    [
+        Theme::new(ColorScheme::Light),
+        Theme::new(ColorScheme::Dark),
+    ]
 }
 
 fn a(f: f32) -> u8 {
@@ -62,7 +65,10 @@ fn an_item_is_40px_high_with_4_by_16_padding_and_a_16px_gap() {
     for t in themes() {
         let i = MenuItemStyle::resolve(Rest, &t);
         assert_eq!(i.min_height_px, 40.0);
-        assert_eq!((i.padding_x_px, i.padding_y_px, i.gap_px), (16.0, 4.0, 16.0));
+        assert_eq!(
+            (i.padding_x_px, i.padding_y_px, i.gap_px),
+            (16.0, 4.0, 16.0)
+        );
         assert_eq!(i.text_margin_y_px, 1.0); // overrides.js:1290-1293
         assert_eq!(i.font, TYPE_BODY1);
     }
@@ -84,7 +90,10 @@ fn an_item_at_rest_is_transparent_with_text_and_icon_colours() {
 #[test]
 fn a_hovered_item_is_filled_with_action_hover() {
     for t in themes() {
-        assert_eq!(MenuItemStyle::resolve(Hover, &t).background, t.colors().action.hover);
+        assert_eq!(
+            MenuItemStyle::resolve(Hover, &t).background,
+            t.colors().action.hover
+        );
     }
 }
 
@@ -94,10 +103,22 @@ fn a_hovered_item_is_filled_with_action_hover() {
 fn a_selected_item_is_tinted_with_primary() {
     let [light, dark] = themes();
     let (lp, dp) = (light.colors().primary.main, dark.colors().primary.main);
-    assert_eq!(MenuItemStyle::resolve(Selected, &light).background, tint(lp, 0.08));
-    assert_eq!(MenuItemStyle::resolve(Selected, &dark).background, tint(dp, 0.16));
-    assert_eq!(MenuItemStyle::resolve(SelectedHover, &light).background, tint(lp, 0.12));
-    assert_eq!(MenuItemStyle::resolve(SelectedHover, &dark).background, tint(dp, 0.24));
+    assert_eq!(
+        MenuItemStyle::resolve(Selected, &light).background,
+        tint(lp, 0.08)
+    );
+    assert_eq!(
+        MenuItemStyle::resolve(Selected, &dark).background,
+        tint(dp, 0.16)
+    );
+    assert_eq!(
+        MenuItemStyle::resolve(SelectedHover, &light).background,
+        tint(lp, 0.12)
+    );
+    assert_eq!(
+        MenuItemStyle::resolve(SelectedHover, &dark).background,
+        tint(dp, 0.24)
+    );
 }
 
 // MenuItem.js:102 `applyInsetFocusVisible(1)`: ring inside, no fill; width 2 px primary.main.
