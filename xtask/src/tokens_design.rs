@@ -18,6 +18,14 @@ fn upper_snake(key: &str) -> String {
     text
 }
 
+/// The entries by key: `serde_json` keeps the file order when another crate of the workspace turns on
+/// `preserve_order`, and `generated.rs` must not depend on that.
+fn sorted(map: &Map<String, Value>) -> Vec<(&String, &Value)> {
+    let mut entries: Vec<_> = map.iter().collect();
+    entries.sort_by_key(|(key, _)| *key);
+    entries
+}
+
 fn section<'a>(root: &'a Map<String, Value>, name: &str) -> Res<Option<&'a Map<String, Value>>> {
     root.get(name).map(|value| object(value, name)).transpose()
 }
@@ -31,7 +39,7 @@ fn whole(value: &Value, what: &str) -> Res<u32> {
 
 fn integers(map: &Map<String, Value>, prefix: &str, what: &str) -> Res<String> {
     let mut text = String::new();
-    for (key, value) in map {
+    for (key, value) in sorted(map) {
         let number = whole(value, &format!("{what} {key}"))?;
         text.push_str(&format!(
             "pub const {prefix}{}: u32 = {number};\n\n",
@@ -53,7 +61,7 @@ fn bezier(text: &str) -> Option<[f64; 4]> {
 
 fn easings(map: &Map<String, Value>) -> Res<String> {
     let mut text = String::new();
-    for (key, value) in map {
+    for (key, value) in sorted(map) {
         let raw = string(value, &format!("easing {key}"))?;
         let Some([x1, y1, x2, y2]) = bezier(raw) else {
             return fail(format!("easing {key}: unsupported curve {raw:?}"));
