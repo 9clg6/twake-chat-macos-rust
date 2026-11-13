@@ -8,6 +8,7 @@
 
 use twake_ui::room_row::BadgeStyle;
 use twake_ui::room_row_style::{BadgeSpec, LIST_WIDTH_PX, RowState, RowStyle};
+use twake_ui_kit::Rgba8;
 use twake_ui_kit::theme::{ColorScheme, Theme};
 
 fn light() -> Theme {
@@ -57,8 +58,14 @@ fn the_name_is_14_medium() {
 
 #[test]
 fn a_resting_row_has_no_fill() {
-    assert_eq!(RowStyle::resolve(REST, &light()).background.a, 0);
-    assert_eq!(RowStyle::resolve(REST, &dark()).background.a, 0);
+    assert_eq!(
+        RowStyle::resolve(REST, &light()).background,
+        Rgba8::new(0, 0, 0, 0)
+    );
+    assert_eq!(
+        RowStyle::resolve(REST, &dark()).background,
+        Rgba8::new(0, 0, 0, 0)
+    );
 }
 
 #[test]

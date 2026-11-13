@@ -10,6 +10,8 @@
 //! to refresh it: `node docs/spec/export-tokens.mjs <twake-space-chat> > docs/spec/tokens.json`,
 //! then `cargo xtask tokens`), 2 when the exporter cannot run or fails.
 
+#![cfg(unix)] // the exporters are `sh` scripts
+
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};

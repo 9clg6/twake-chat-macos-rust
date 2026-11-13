@@ -43,6 +43,8 @@ fn tokens(args: &[&str]) -> Option<Output> {
     let run = Command::new(env!("CARGO_BIN_EXE_xtask"))
         .arg("tokens")
         .args(args)
+        // The React checkout of the developer must not turn the upstream check on.
+        .env_remove("TWAKE_SPACE_CHAT_DIR")
         .output();
     run.ok()
 }

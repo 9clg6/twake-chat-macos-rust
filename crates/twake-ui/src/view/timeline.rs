@@ -36,6 +36,9 @@ const BAR_BORDER: f32 = 1.0;
 const BENCH_FRAMES: usize = 600;
 const BENCH_STEP: f32 = 48.0;
 
+#[cfg(test)]
+mod tests;
+
 /// Lines a text takes in a bubble, filling each line with words greedily.
 fn wrap_lines(text: &str, per_line: usize) -> usize {
     let mut lines = 0;

@@ -5,7 +5,7 @@
 //! `min(75 %, 520 px)` of the column. Public items: `twake_ui::bubble_style::BubbleStyle::resolve`.
 //! Not covered here: the 1 px shadow and the tail (shadows come with the token export, lot 1 d).
 
-use twake_ui::bubble_style::BubbleStyle;
+use twake_ui::bubble_style::{BubbleStyle, wallpaper};
 use twake_ui::timeline_rows::Side;
 use twake_ui_kit::theme::{ColorScheme, Theme};
 
@@ -101,4 +101,11 @@ fn a_column_of_no_width_gives_a_bubble_of_no_width() {
         BubbleStyle::resolve(Side::Own, &light(), 0.0).max_width_px,
         0.0
     );
+}
+
+#[test]
+fn the_conversation_wallpaper_falls_back_to_a_pale_blue_in_light_and_a_dark_slate_in_dark() {
+    let (l, d) = (wallpaper(&light()), wallpaper(&dark()));
+    assert_eq!((l.r, l.g, l.b, l.a), (222, 228, 252, 255));
+    assert_eq!((d.r, d.g, d.b, d.a), (44, 52, 72, 255));
 }
