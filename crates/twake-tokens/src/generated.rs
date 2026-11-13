@@ -469,140 +469,18 @@ pub const SHARP: [f32; 4] = [0.4, 0.0, 0.6, 1.0];
 
 pub const FONT_FAMILY: &str = "\"Inter\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,\"Helvetica Neue\",Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\",\"Segoe UI Symbol\"";
 
-pub const AVATAR_COLOR_NAMES: [&str; 11] = [
-    "sunrise",
-    "downy",
-    "sugarCoral",
-    "pinkBonnet",
-    "blueMana",
-    "nightBlue",
-    "snowPea",
-    "pluviophile",
-    "cornflower",
-    "paleGreen",
-    "moonBlue",
-];
+pub const AVATAR_COLOR_NAMES: [&str; 11] = ["sunrise", "downy", "sugarCoral", "pinkBonnet", "blueMana", "nightBlue", "snowPea", "pluviophile", "cornflower", "paleGreen", "moonBlue"];
 
 pub const AVATAR_GRADIENTS: [Gradient; 11] = [
-    Gradient {
-        angle_deg: 136.0,
-        from: GradientStop {
-            color: Rgba8::new(248, 210, 128, 255),
-            at_percent: 14.84,
-        },
-        to: GradientStop {
-            color: Rgba8::new(242, 172, 105, 255),
-            at_percent: 96.03,
-        },
-    },
-    Gradient {
-        angle_deg: 136.0,
-        from: GradientStop {
-            color: Rgba8::new(129, 234, 212, 255),
-            at_percent: 14.84,
-        },
-        to: GradientStop {
-            color: Rgba8::new(98, 198, 183, 255),
-            at_percent: 96.03,
-        },
-    },
-    Gradient {
-        angle_deg: 136.0,
-        from: GradientStop {
-            color: Rgba8::new(241, 158, 134, 255),
-            at_percent: 14.84,
-        },
-        to: GradientStop {
-            color: Rgba8::new(249, 89, 103, 255),
-            at_percent: 96.03,
-        },
-    },
-    Gradient {
-        angle_deg: 136.0,
-        from: GradientStop {
-            color: Rgba8::new(228, 171, 240, 255),
-            at_percent: 14.84,
-        },
-        to: GradientStop {
-            color: Rgba8::new(217, 110, 237, 255),
-            at_percent: 96.03,
-        },
-    },
-    Gradient {
-        angle_deg: 136.0,
-        from: GradientStop {
-            color: Rgba8::new(133, 217, 253, 255),
-            at_percent: 14.84,
-        },
-        to: GradientStop {
-            color: Rgba8::new(42, 158, 252, 255),
-            at_percent: 96.03,
-        },
-    },
-    Gradient {
-        angle_deg: 136.0,
-        from: GradientStop {
-            color: Rgba8::new(128, 174, 255, 255),
-            at_percent: 39.32,
-        },
-        to: GradientStop {
-            color: Rgba8::new(136, 61, 254, 255),
-            at_percent: 96.03,
-        },
-    },
-    Gradient {
-        angle_deg: 136.0,
-        from: GradientStop {
-            color: Rgba8::new(189, 244, 161, 255),
-            at_percent: 14.84,
-        },
-        to: GradientStop {
-            color: Rgba8::new(82, 206, 100, 255),
-            at_percent: 96.03,
-        },
-    },
-    Gradient {
-        angle_deg: 136.0,
-        from: GradientStop {
-            color: Rgba8::new(161, 214, 244, 255),
-            at_percent: 14.84,
-        },
-        to: GradientStop {
-            color: Rgba8::new(82, 206, 194, 255),
-            at_percent: 96.03,
-        },
-    },
-    Gradient {
-        angle_deg: 135.0,
-        from: GradientStop {
-            color: Rgba8::new(134, 217, 211, 255),
-            at_percent: 0.0,
-        },
-        to: GradientStop {
-            color: Rgba8::new(28, 207, 180, 255),
-            at_percent: 100.0,
-        },
-    },
-    Gradient {
-        angle_deg: 135.0,
-        from: GradientStop {
-            color: Rgba8::new(226, 250, 23, 255),
-            at_percent: 0.0,
-        },
-        to: GradientStop {
-            color: Rgba8::new(117, 216, 203, 255),
-            at_percent: 100.0,
-        },
-    },
-    Gradient {
-        angle_deg: 136.0,
-        from: GradientStop {
-            color: Rgba8::new(109, 207, 255, 255),
-            at_percent: 14.84,
-        },
-        to: GradientStop {
-            color: Rgba8::new(61, 136, 248, 255),
-            at_percent: 96.03,
-        },
-    },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(248, 210, 128, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(242, 172, 105, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(129, 234, 212, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(98, 198, 183, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(241, 158, 134, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(249, 89, 103, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(228, 171, 240, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(217, 110, 237, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(133, 217, 253, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(42, 158, 252, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(128, 174, 255, 255), at_percent: 39.32 }, to: GradientStop { color: Rgba8::new(136, 61, 254, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(189, 244, 161, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(82, 206, 100, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(161, 214, 244, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(82, 206, 194, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 135.0, from: GradientStop { color: Rgba8::new(134, 217, 211, 255), at_percent: 0.0 }, to: GradientStop { color: Rgba8::new(28, 207, 180, 255), at_percent: 100.0 } },
+    Gradient { angle_deg: 135.0, from: GradientStop { color: Rgba8::new(226, 250, 23, 255), at_percent: 0.0 }, to: GradientStop { color: Rgba8::new(117, 216, 203, 255), at_percent: 100.0 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(109, 207, 255, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(61, 136, 248, 255), at_percent: 96.03 } },
 ];

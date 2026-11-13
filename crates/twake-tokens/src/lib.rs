@@ -3,6 +3,8 @@
 
 use std::fmt;
 
+// The generator writes long lines (shadows, gradients): rustfmt must not rewrite it, `--check` compares bytes.
+#[rustfmt::skip]
 mod generated;
 
 pub use generated::*;
