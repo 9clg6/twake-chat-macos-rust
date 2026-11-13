@@ -14,6 +14,8 @@ use twake_domain::{EventId, RoomId, Timestamp, UserId};
 /// Messages of the big room.
 pub const BIG_ROOM_MESSAGES: usize = 10_000;
 const ROOMS: usize = 50;
+/// Who wrote the newest messages, newest first: `true` is the user.
+const OWN_TAIL: [bool; 9] = [true, true, false, true, false, false, true, true, false];
 const MINUTE_MS: u64 = 60_000;
 const DAY_MS: u64 = 24 * 60 * MINUTE_MS;
 
@@ -136,7 +138,15 @@ fn history(
             0 => 20 * MINUTE_MS + rng.next() % (3 * 60 * MINUTE_MS),
             _ => MINUTE_MS / 4 + rng.next() % (2 * MINUTE_MS),
         };
-        if rng.below(3) == 0 {
+        // The newest messages mix both sides, so the first view shows own bubbles.
+        let from_end = count - 1 - n;
+        if from_end < OWN_TAIL.len() {
+            sender = if OWN_TAIL[from_end] {
+                me.clone()
+            } else {
+                people[from_end % people.len()].0.clone()
+            };
+        } else if rng.below(3) == 0 {
             sender = if rng.below(3) == 0 {
                 me.clone()
             } else {
