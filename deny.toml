@@ -4,22 +4,16 @@ all-features = true
 [advisories]
 version = 2
 yanked = "deny"
-# Only informational "unmaintained" advisories are ignored, one by id, all via gpui 0.2.2.
-# A vulnerability is never ignored, except RUSTSEC-2026-0459, which is fixed by a local patch the scanner cannot see (A025). Review every entry at each gpui bump (A018).
+# Only informational "unmaintained" advisories are ignored, one by id, all via gpui-unofficial 1.28.1 (A028) or matrix-sdk.
+# A vulnerability is never ignored, except RUSTSEC-2026-0459, which is fixed by a local patch the scanner cannot see (A025). Review every entry at each gpui bump (A018, A028): drop the ones `cargo deny` reports as not encountered.
 ignore = [
-  { id = "RUSTSEC-2024-0384", reason = "unmaintained, transitive only: instant 0.1.13 <- fastrand 1.9 <- futures-lite 1.13 <- gpui_util / gpui_http_client <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
-  { id = "RUSTSEC-2024-0436", reason = "unmaintained, transitive only: paste 1.0.15 <- metal 0.29 <- core-video / gpui <- gpui 0.2.2 (macOS rendering); reviewed 2026-11-12 (A018)" },
-  { id = "RUSTSEC-2025-0052", reason = "unmaintained, transitive only: async-std 1.13.2 <- zed-async-tar <- gpui_http_client <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
-  { id = "RUSTSEC-2025-0134", reason = "unmaintained, transitive only: rustls-pemfile 2.2.0 <- zed-reqwest <- gpui_http_client <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
-  { id = "RUSTSEC-2026-0173", reason = "unmaintained, transitive only: proc-macro-error2 2.0.1 <- stacksafe-macro <- stacksafe <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
-  { id = "RUSTSEC-2026-0192", reason = "unmaintained, transitive only: ttf-parser 0.20/0.21/0.25 <- fontdb, rustybuzz <- cosmic-text 0.14 and usvg/resvg 0.45 <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
-  { id = "RUSTSEC-2026-0206", reason = "unmaintained, transitive only: rustybuzz 0.14.1 <- cosmic-text 0.14 <- gpui 0.2.2; rustybuzz 0.20.1 <- usvg 0.45 <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
-  { id = "RUSTSEC-2026-0370", reason = "unmaintained, transitive only: zvariant 5.15 <- zbus 5.19 / zbus_macros <- ashpd, oo7 <- gpui 0.2.2 (Linux portals); reviewed 2026-11-12 (A018)" },
-  { id = "RUSTSEC-2026-0371", reason = "unmaintained, transitive only: zbus_names 4.3 <- zbus 5.19 <- ashpd, oo7 <- gpui 0.2.2 (Linux portals); reviewed 2026-11-12 (A018)" },
-  { id = "RUSTSEC-2026-0372", reason = "unmaintained, transitive only: zvariant_derive 5.15 <- zvariant <- zbus <- ashpd, oo7 <- gpui 0.2.2 (Linux portals); reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2026-0192", reason = "unmaintained, transitive only: ttf-parser 0.25.1 <- fontdb 0.23 <- usvg 0.46, and <- cosmic-text 0.19 (Linux wgpu build only) <- gpui-unofficial 1.28.1; reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2026-0206", reason = "unmaintained, transitive only: rustybuzz 0.20.1 <- usvg 0.46 <- gpui-unofficial 1.28.1 (SVG icons, macOS too); reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2026-0370", reason = "unmaintained, transitive only: zvariant 5.15 <- zbus 5.19 <- accesskit_unix, ashpd <- gpui-linux (Linux only, not compiled on macOS); reviewed 2026-11-13 (A028)" },
+  { id = "RUSTSEC-2026-0371", reason = "unmaintained, transitive only: zbus_names 4.3 <- zbus 5.19 <- accesskit_unix, ashpd <- gpui-linux (Linux only, not compiled on macOS); reviewed 2026-11-13 (A028)" },
+  { id = "RUSTSEC-2026-0372", reason = "unmaintained, transitive only: zvariant_derive 5.15 <- zvariant <- zbus <- accesskit_unix, ashpd <- gpui-linux (Linux only, not compiled on macOS); reviewed 2026-11-13 (A028)" },
   { id = "RUSTSEC-2026-0319", reason = "unmaintained, transitive only: anymap2 0.13.0 <- matrix-sdk 0.19.1 (pinned, A003); reviewed 2026-11-12 (spike S2)" },
   { id = "RUSTSEC-2026-0459", reason = "fixed by a local patch, A025: vendor/libsqlite3-sys is 0.38.2 with the SQLite 3.54.1 sources, bundled (the advisory only reads the crate version). Drop with the patch when matrix-sdk-sqlite moves to rusqlite >= 0.41" },
-  { id = "RUSTSEC-2026-0441", reason = "unmaintained, transitive only: pin-utils 0.1.1 <- async-std <- zed-async-tar <- gpui_http_client <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
 ]
 
 [licenses]
@@ -39,12 +33,9 @@ allow = [
   "BSL-1.0",
 ]
 confidence-threshold = 0.9
-# libfuzzer-sys is "(MIT OR Apache-2.0) AND NCSA" (permissive, MIT-like); only it needs NCSA.
-# libfuzzer-sys <- rav1e <- ravif <- image <- gpui 0.2.2. Reviewed 2026-11-12 (A018).
 # webpki-root-certs ships the Mozilla CA list under CDLA-Permissive-2.0 (permissive data licence:
 # use, modify, share; keep the licence text). webpki-root-certs <- rustls-platform-verifier <- reqwest <- matrix-sdk 0.19.1 (A025).
 exceptions = [
-  { allow = ["NCSA"], crate = "libfuzzer-sys" },
   { allow = ["CDLA-Permissive-2.0"], crate = "webpki-root-certs" },
 ]
 
