@@ -190,6 +190,21 @@ pub struct ActionColors {
     pub focus: Rgba8,
 }
 
+/// Opacities of interaction states (`palette.action.*Opacity`), as fractions of `0..=1`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct ActionOpacities {
+    /// Hovered surface.
+    pub hover: f32,
+    /// Selected surface.
+    pub selected: f32,
+    /// A disabled control fades to this.
+    pub disabled: f32,
+    /// Fill of a `ghost` button.
+    pub ghost: f32,
+    /// Fill of a hovered `ghost` button.
+    pub hover_ghost: f32,
+}
+
 /// The colours of one scheme (light or dark).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Scheme {
