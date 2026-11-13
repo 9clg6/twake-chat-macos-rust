@@ -1,5 +1,5 @@
 //! Colours and geometry of a message bubble (`MessageBubble.tsx` of the React app), as data.
-//! Not here yet (A026): the 1 px shadow and the tail.
+//! The 1 px shadow is drawn by the timeline view; the tail is not here yet (A026).
 
 use twake_ui_kit::Rgba8;
 use twake_ui_kit::color::mix;

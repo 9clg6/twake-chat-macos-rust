@@ -3,8 +3,8 @@
 use std::time::Instant;
 
 use twake_gpui::{
-    AnyElement, AnyView, Context, Div, InteractiveElement, IntoElement, ParentElement, Render,
-    ScrollWheelEvent, Styled, Window, div, px,
+    AnyElement, AnyView, BoxShadow, Context, Div, Hsla, InteractiveElement, IntoElement,
+    ParentElement, Render, ScrollWheelEvent, Styled, Window, div, point, px,
 };
 use twake_ui_kit::theme::Theme;
 use twake_ui_kit::view::hsla;
@@ -33,6 +33,8 @@ const AVATAR_SIZE: f32 = 32.0;
 /// Vertical padding of the bar that holds the footer, and its top border.
 const BAR_PADDING: f32 = 8.0;
 const BAR_BORDER: f32 = 1.0;
+/// `0 1px 1px rgba(0, 0, 0, 0.1)` under a bubble, as in `MessageBubble.tsx`.
+const SHADOW_ALPHA: f32 = 0.1;
 const BENCH_FRAMES: usize = 600;
 const BENCH_STEP: f32 = 48.0;
 
@@ -55,7 +57,7 @@ fn wrap_lines(text: &str, per_line: usize) -> usize {
             lines += length.saturating_sub(1) / per_line;
         }
     }
-    lines.max(1)
+    lines
 }
 
 /// Width a bubble may fill in a column `column_px` wide: the line without its padding and, for
@@ -335,6 +337,17 @@ fn bubble_body(bubble: &BubbleView, container_px: f32, theme: Theme) -> impl Int
         .py(px(style.padding_y_px))
         .rounded(px(style.radius_px))
         .bg(hsla(style.background))
+        .shadow(vec![BoxShadow {
+            color: Hsla {
+                h: 0.0,
+                s: 0.0,
+                l: 0.0,
+                a: SHADOW_ALPHA,
+            },
+            offset: point(px(0.0), px(1.0)),
+            blur_radius: px(1.0),
+            spread_radius: px(0.0),
+        }])
         .text_color(hsla(style.text))
         .text_size(px(style.font_size_px))
         .line_height(px(style.line_height_px))
