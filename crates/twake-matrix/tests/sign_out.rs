@@ -109,6 +109,7 @@ async fn a_soft_logout_is_reported_and_keeps_the_device_and_its_keys() {
     server.mock_versions().ok().mount().await;
     server
         .mock_who_am_i()
+        .expect_access_token("tok")
         .error_unknown_token(true)
         .mount()
         .await;
@@ -134,6 +135,7 @@ async fn a_hard_logout_is_told_apart_from_a_soft_one() {
     server.mock_versions().ok().mount().await;
     server
         .mock_who_am_i()
+        .expect_access_token("tok")
         .respond_with(ResponseTemplate::new(401).set_body_json(
             serde_json::json!({"errcode": "M_UNKNOWN_TOKEN", "error": "gone", "soft_logout": false}),
         ))
@@ -153,7 +155,12 @@ async fn a_hard_logout_is_told_apart_from_a_soft_one() {
 async fn no_expiry_is_reported_while_the_session_is_valid() {
     let server = MatrixMockServer::new().await;
     server.mock_versions().ok().mount().await;
-    server.mock_who_am_i().ok().mount().await;
+    server
+        .mock_who_am_i()
+        .expect_access_token("tok")
+        .ok()
+        .mount()
+        .await;
     let dir = tempfile::tempdir().unwrap();
     let client = signed_in(&server, dir.path()).await;
     let mut events = Box::pin(expiry(&client));
