@@ -3928,6 +3928,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "keyring-core"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "29fbf4b551298c67925f38cf341a1ada797a75f1837bdf8ae1fc8e2ebc6efb59"
+dependencies = [
+ "log",
+]
+
+[[package]]
 name = "khronos-egl"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8259,10 +8268,12 @@ name = "twake-store"
 version = "0.1.0"
 dependencies = [
  "futures",
+ "keyring-core",
  "thiserror 2.0.21",
  "twake-app",
  "twake-domain",
  "twake-testing",
+ "uuid",
 ]
 
 [[package]]

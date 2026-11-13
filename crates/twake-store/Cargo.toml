@@ -16,3 +16,5 @@ thiserror = "2.0.21"
 
 [dev-dependencies]
 twake-testing = { path = "../twake-testing" }
+keyring-core = "1.0.1"
+uuid = { version = "1", features = ["v4"] }
