@@ -187,3 +187,86 @@ fn the_key_is_filed_under_the_service_of_the_application() {
         .any(|c| c.specifiers.0 == KEYCHAIN_SERVICE);
     assert!(kept);
 }
+
+fn not_64_lowercase_hex() -> Vec<String> {
+    vec![
+        String::new(),
+        "zz".into(),
+        "a".repeat(63),
+        "a".repeat(65),
+        "A".repeat(64),
+        format!("{}g", "a".repeat(63)),
+        format!("{}\n", "a".repeat(64)),
+        format!("{} ", "a".repeat(63)),
+        "é".repeat(32),
+    ]
+}
+
+#[test]
+fn a_kept_value_that_is_not_64_lowercase_hexadecimals_is_an_error_and_is_never_replaced() {
+    for bad in not_64_lowercase_hex() {
+        let (_, keychain) = keychain();
+        keychain
+            .set("store-key:@alice:example.org", &Secret::new(bad.clone()))
+            .unwrap();
+        let generated = Cell::new(0);
+        let result = store_key_for(&keychain, &user("alice"), || {
+            generated.set(generated.get() + 1);
+            Secret::new("d".repeat(64))
+        });
+        assert!(result.is_err(), "accepted {bad:?}");
+        assert_eq!(generated.get(), 0, "generated over {bad:?}");
+        let kept = keychain
+            .get("store-key:@alice:example.org")
+            .unwrap()
+            .unwrap();
+        assert_eq!(kept.expose(), bad, "the kept value was overwritten");
+    }
+}
+
+#[test]
+fn a_bad_key_stays_an_error_on_every_request() {
+    let (_, keychain) = keychain();
+    keychain
+        .set("store-key:@alice:example.org", &Secret::new("zz"))
+        .unwrap();
+    for _ in 0..2 {
+        let result = store_key_for(&keychain, &user("alice"), || panic!("regenerated"));
+        assert!(result.is_err());
+    }
+}
+
+#[test]
+fn a_bad_key_of_one_account_leaves_the_valid_key_of_another_untouched() {
+    let (_, keychain) = keychain();
+    let bob = store_key_for(&keychain, &user("bob"), || Secret::new("b".repeat(64))).unwrap();
+    keychain
+        .set("store-key:@alice:example.org", &Secret::new("zz"))
+        .unwrap();
+    assert!(store_key_for(&keychain, &user("alice"), || panic!("regenerated")).is_err());
+    let bob_again = store_key_for(&keychain, &user("bob"), || panic!("regenerated")).unwrap();
+    assert_eq!(bob.expose(), bob_again.expose());
+    let alice = keychain
+        .get("store-key:@alice:example.org")
+        .unwrap()
+        .unwrap();
+    assert_eq!(alice.expose(), "zz");
+}
+
+#[test]
+fn the_bad_value_never_appears_in_the_error() {
+    let (_, keychain) = keychain();
+    let secret = "TOPSECRETvalue-not-hex";
+    keychain
+        .set("store-key:@alice:example.org", &Secret::new(secret))
+        .unwrap();
+    let error = store_key_for(&keychain, &user("alice"), || panic!("regenerated")).unwrap_err();
+    for text in [
+        error.to_string(),
+        format!("{error:?}"),
+        format!("{error:#?}"),
+    ] {
+        assert!(!text.contains(secret), "leaked in {text:?}");
+        assert!(!text.contains("TOPSECRET"), "leaked in {text:?}");
+    }
+}
