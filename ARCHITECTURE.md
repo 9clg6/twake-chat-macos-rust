@@ -75,7 +75,7 @@ Arrow = "MAY depend on". An internal edge not listed is forbidden.
 | `twake-matrix` | Adapter over `matrix-sdk` / `matrix-sdk-ui`: sync, room list, timeline, crypto, SQLite store, SSO login. Produces domain snapshots and diffs. | `twake-app`, `twake-domain`, `matrix-sdk*`, `futures`, `thiserror`, `tokio` (`sync`), `rustls` (`aws_lc_rs`); dev: `wiremock`, `tempfile`, `serde_json` |
 | `twake-services` | HTTP adapters: ToM, side service (assistants, suggestions, analytics), Meet REST, GIF proxy. | `twake-app`, `twake-domain`, `reqwest` (rustls) |
 | `twake-media` | Scheduling, decode off-thread, thumbnails, pixel-budget cache, waveform. Gets bytes through the `Media` port (`twake-app`); never does HTTP itself. | `twake-app`, `twake-domain`, `image` |
-| `twake-store` | `SecretStore` over `keyring-core`, preferences file, store-passphrase generation. | `twake-app`, `twake-domain`, `futures`, `thiserror`, `keyring-core`, `zeroize`; dev: `twake-testing` |
+| `twake-store` | `SecretStore` over `keyring-core`, preferences file, store-passphrase generation. | `twake-app`, `twake-domain`, `futures`, `thiserror`, `keyring-core`, `getrandom`; per OS `apple-native-keyring-store`, `windows-native-keyring-store`, `zbus-secret-service-keyring-store`; dev: `twake-testing`, `uuid` |
 | `twake-platform` | Notifications, deep links, single instance, tray, badge, accent colour. `cfg(target_os)` modules. | `twake-app`, `twake-domain` |
 | `twake-calls` | MatrixRTC signalling + LiveKit media. Optional (`calls` feature). | `twake-app`, `twake-domain`, `livekit` |
 | `twake-i18n` | `Translator`, Fluent bundles, locale detection, plural rules. | `twake-domain` |
@@ -306,14 +306,13 @@ Enforced in CI, ratchet style (limits can only tighten; a suppression list can o
 | S8 | SSO loopback against the Twake Synapse (redirect URL allowed by the IdP?). | Sign-in completed on macOS with a loopback port. |
 | S9 | i18n format: read the web `en.json` (plurals, interpolation, ICU?) before fixing Fluent vs generating from the web files. | Decision A006 written with a sample of 20 real strings. |
 
-**S1 does not gate UI work (decision A010, Clément, 2026-11-12).** UI development starts now on
-`gpui = "0.2.2"` (what builds today in this repo), behind `twake-gpui`. GPUI 0.2.2 was published
-2025-10-22 and has no AccessKit, so the VoiceOver target of section 10 is unreachable on it, and
-moving to another source later (Zed git, a fork) may force UI rework; that cost is accepted.
-To keep it small: every GPUI import goes through `twake_gpui`, GPUI-specific code stays in
-`twake-ui-kit` and `twake-ui`, and the tokens, icons, domain and adapters stay GPUI-free.
-S1 runs in parallel, time-boxed to 2 days, and ends with a decision to stay or migrate; a
-migration is its own PR.
+**S1 outcome (A022 accepted in A025, adopted in A028, 2026-11-13).** The UI runs on
+`gpui-unofficial =1.28.1` (Zed tag `v1.28.1`, repackaged on crates.io) behind `twake-gpui`, which
+re-exports `gpui` and `gpui_platform` (with its `font-kit` feature: without it macOS draws no text).
+It has AccessKit, so the VoiceOver target of section 10 is reachable; what is missing is in
+`docs/dev/gpui-a11y.md`. Every bump is re-diffed against the Zed tag (`docs/dev/gpui-rediff.md`).
+(Before it, decision A010 started the UI on `gpui = "0.2.2"` without gating on S1; every GPUI import already went through
+`twake_gpui`, so the migration touched 6 files outside the facade.)
 
 ## 13b. Provisional rules
 
@@ -339,7 +338,7 @@ by a spike:
 - Seed decisions (to be written as `A001`–`A010` in the first commit of the workspace):
   A001 flat crates + prefix `twake-`; A002 GPUI behind `twake-gpui`; A003 exact-pinned
   matrix-sdk, one adapter; A004 one Tokio runtime, 2–4 workers; A005 keychain-only secrets;
-  A006 Fluent for i18n; A007 tokens/icons generated and GPUI-free; A008 nightly-only E2E; A009 ports return boxed Send futures (dyn-compatible); A010 UI starts on gpui 0.2.2, S1 does not gate it.
+  A006 Fluent for i18n; A007 tokens/icons generated and GPUI-free; A008 nightly-only E2E; A009 ports return boxed Send futures (dyn-compatible); A010 UI starts on gpui 0.2.2, S1 does not gate it; A028 moves to gpui-unofficial 1.28.1.
 - Every PR states which sections of this file it touches and, for UI, which inventory ids it ports.
 
 ## 15. Definition of done for a feature
