@@ -72,7 +72,7 @@ merged before the code that needs it. Product decisions of the React app keep th
 ## A012 Token generator: dependencies and spellings
 - Context: `cargo xtask tokens` turns `docs/spec/tokens.json` into `twake-tokens/src/generated.rs`; the tests were written before the code.
 - Decision: `serde_json` is a dev-dependency of `twake-tokens` (its tests read `tokens.json`; dev-dependencies do not count against rule 3, A011 Q7) and a normal dependency of `xtask` (a build tool, not a product crate). A shade is read with `PRIMARY.shade(600)`, not `PRIMARY[600]` (a lookup that can fail, `None` for any other number). The command takes `--input FILE` and `--output FILE` besides `--check`, for tests and for other token files.
-- Scope: not generated for now: shadows, zIndex, transitions, the accents of Grey, components and icons (all in `tokens.json`); the 1:1 copy of twake-mui will need them later.
+- Scope: not generated first: shadows, zIndex, transitions, the accents of Grey, components and icons (all in `tokens.json`). A026 lifted it for the shadows (`tokens.json` and `generated.rs` carry them), zIndex, transitions and `action`; the accents of Grey, components and icons stay out.
 - Consequences: `twake-tokens` stays dependency-free; `generated.rs` is committed and CI runs `cargo xtask tokens --check`; the placeholder `THEME` is gone, `twake-desktop` reads `LIGHT`.
 - Risk: none beyond a stale `generated.rs`, which `--check` catches.
 
@@ -84,9 +84,9 @@ merged before the code that needs it. Product decisions of the React app keep th
 - Risk: none beyond a stale `generated.rs`, which `--check` catches; a bad id or viewBox in a new export fails the generator.
 
 ## A014 Button: `action` colours in twake-ui-kit, pressed, paddings, ring
-- Context: `twake-tokens` has no `action` colours; the ui-kit foundation tests (`crates/twake-ui-kit/tests`) pin the values of design-system.md lines 107-114.
-- Decision: hover alpha (10 light, 20 dark), disabled (61, 82) and disabledBackground (31) are constants of `twake-ui-kit::button`, until the token generator exports `action`. Pressed looks like hover (MUI has no pressed colour). Outlined small and large padding are deduced (16 x 9, 32 x 13). The focus ring is 2 px in `primary.main`. The colour glue is `twake_ui_kit::color`, not `twake-gpui`, so the edge `twake-gpui -> twake-tokens` stays forbidden (`check-deps`).
-- Consequences: the constants move to `twake-tokens` when `action` is generated; `Button` in `view.rs` has no test (needs a window).
+- Context: `twake-tokens` had no `action` colours at first; the ui-kit foundation tests (`crates/twake-ui-kit/tests`) pin the values of design-system.md lines 107-114.
+- Decision: the `action` colours (hover, disabled, disabledBackground, focus) come from `twake-tokens` (A026); `twake-ui-kit::button` holds no constant of them any more. Pressed looks like hover (MUI has no pressed colour). Outlined small and large padding are deduced (16 x 9, 32 x 13). The focus ring is 2 px in `primary.main`. The colour glue is `twake_ui_kit::color`, not `twake-gpui`, so the edge `twake-gpui -> twake-tokens` stays forbidden (`check-deps`).
+- Consequences: `Button` in `view.rs` has no test (needs a window).
 - Risk: the deduced paddings may differ from twake-mui; the disabled outlined border is not decided (it follows the text colour).
 
 ## A015 Accent folding in `twake-domain`: `unicode-normalization`
