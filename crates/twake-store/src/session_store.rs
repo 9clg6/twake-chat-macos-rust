@@ -74,6 +74,11 @@ fn encode(sessions: &[Session]) -> Secret {
     )
 }
 
+/// A token the line format can read back: non-empty, no whitespace, no control character.
+fn holdable(token: &str) -> bool {
+    !token.is_empty() && !token.chars().any(|c| c.is_whitespace() || c.is_control())
+}
+
 fn decode(text: &str) -> Result<Vec<Session>, SessionStoreError> {
     text.lines()
         .map(|line| decode_line(line).ok_or(SessionStoreError::Unavailable))
@@ -94,6 +99,9 @@ fn decode_line(line: &str) -> Option<Session> {
 impl SessionStorePort for KeychainSessionStore {
     fn save(&self, session: Session) -> BoxFuture<'_, Result<(), SessionStoreError>> {
         self.run(|store| {
+            if !holdable(session.access_token.expose()) {
+                return Err(SessionStoreError::Unavailable);
+            }
             let mut sessions = store.read()?;
             match sessions.iter().position(|s| s.user_id == session.user_id) {
                 Some(place) => sessions[place] = session,
