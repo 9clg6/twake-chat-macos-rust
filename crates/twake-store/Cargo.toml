@@ -11,3 +11,7 @@ workspace = true
 [dependencies]
 twake-app = { path = "../twake-app" }
 twake-domain = { path = "../twake-domain" }
+
+[dev-dependencies]
+twake-testing = { path = "../twake-testing" }
+futures = "0.3"
