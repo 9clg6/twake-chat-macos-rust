@@ -40,8 +40,8 @@ fn classify(error: &Error) -> LoginError {
             _ if api.status_code.is_server_error() => LoginError::Server,
             Some(ErrorKind::LimitExceeded(_)) => LoginError::Server,
             Some(_) => LoginError::InvalidToken,
-            // A client error that is no Matrix error: nothing there speaks Matrix.
-            None => LoginError::Unreachable,
+            // A client error with no Matrix kind: the server answered, it is not a transport failure.
+            None => LoginError::Server,
         };
     }
     match error {
