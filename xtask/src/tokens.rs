@@ -368,14 +368,22 @@ fn version(root: &Map<String, Value>) -> Res<&str> {
     }
 }
 
-fn body(root: &Map<String, Value>) -> Res<String> {
+/// Lengths: spacing, shape, radii and breakpoints.
+fn sizes(root: &Map<String, Value>) -> Res<String> {
     Ok([
-        palettes(root)?,
-        schemes(root)?,
         single(root, "spacing", "unit", "SPACING")?,
         single(root, "shape", "borderRadius", "SHAPE_RADIUS")?,
         lengths(root, "radius", &RADII, "RADIUS_")?,
         lengths(root, "breakpoints", &BREAKPOINTS, "BREAKPOINT_")?,
+    ]
+    .concat())
+}
+
+fn body(root: &Map<String, Value>) -> Res<String> {
+    Ok([
+        palettes(root)?,
+        schemes(root)?,
+        sizes(root)?,
         typography(root)?,
         theme(root)?,
         avatars(root)?,
