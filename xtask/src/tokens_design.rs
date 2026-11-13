@@ -88,31 +88,36 @@ pub(crate) fn shadows(mode: &str, raw: &Map<String, Value>) -> Res<String> {
     ))
 }
 
+fn z_indexes(root: &Map<String, Value>) -> Res<String> {
+    let map = section(root, "zIndex")?;
+    map.map_or(Ok(String::new()), |map| integers(map, "Z_", "zIndex"))
+}
+
+fn transitions(root: &Map<String, Value>) -> Res<String> {
+    let Some(map) = section(root, "transitions")? else {
+        return Ok(String::new());
+    };
+    let part = |key: &str| map.get(key).map(|value| object(value, key)).transpose();
+    let durations =
+        part("duration")?.map_or(Ok(String::new()), |m| integers(m, "DURATION_", "duration"))?;
+    let curves = part("easing")?.map_or(Ok(String::new()), easings)?;
+    Ok(durations + &curves)
+}
+
+fn font_family(root: &Map<String, Value>) -> Res<String> {
+    let Some(family) = section(root, "typographyBase")?.and_then(|map| map.get("fontFamily"))
+    else {
+        return Ok(String::new());
+    };
+    Ok(format!(
+        "pub const FONT_FAMILY: &str = {:?};\n\n",
+        string(family, "fontFamily")?
+    ))
+}
+
 /// `zIndex`, `transitions` and the font family.
 pub(crate) fn theme(root: &Map<String, Value>) -> Res<String> {
-    let mut text = String::new();
-    if let Some(map) = section(root, "zIndex")? {
-        text.push_str(&integers(map, "Z_", "zIndex")?);
-    }
-    if let Some(map) = section(root, "transitions")? {
-        if let Some(durations) = map.get("duration") {
-            text.push_str(&integers(
-                object(durations, "duration")?,
-                "DURATION_",
-                "duration",
-            )?);
-        }
-        if let Some(curves) = map.get("easing") {
-            text.push_str(&easings(object(curves, "easing")?)?);
-        }
-    }
-    if let Some(family) = section(root, "typographyBase")?.and_then(|map| map.get("fontFamily")) {
-        text.push_str(&format!(
-            "pub const FONT_FAMILY: &str = {:?};\n\n",
-            string(family, "fontFamily")?
-        ));
-    }
-    Ok(text)
+    Ok([z_indexes(root)?, transitions(root)?, font_family(root)?].concat())
 }
 
 /// `linear-gradient(136deg, #F8D280 14.84%, #F2AC69 96.03%)` as a `Gradient`.

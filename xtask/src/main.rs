@@ -69,6 +69,17 @@ struct Options {
     exporter: Option<PathBuf>,
 }
 
+/// A flag that takes a file: false when the flag is unknown or lacks its value.
+fn set_path(options: &mut Options, flag: &str, path: Option<PathBuf>) -> bool {
+    match (flag, path) {
+        ("--input", Some(path)) => options.input = path,
+        ("--output", Some(path)) => options.output = path,
+        ("--exporter", Some(path)) => options.exporter = Some(path),
+        _ => return false,
+    }
+    true
+}
+
 /// The flag that is unknown, or that lacks its value.
 fn parse_options<'a>(task: &Task, args: &'a [String]) -> Result<Options, &'a String> {
     let mut options = Options {
@@ -79,13 +90,10 @@ fn parse_options<'a>(task: &Task, args: &'a [String]) -> Result<Options, &'a Str
     };
     let mut args = args.iter();
     while let Some(flag) = args.next() {
-        let mut value = || args.next().map(PathBuf::from).ok_or(flag);
-        match flag.as_str() {
-            "--check" => options.check = true,
-            "--input" => options.input = value()?,
-            "--output" => options.output = value()?,
-            "--exporter" => options.exporter = Some(value()?),
-            _ => return Err(flag),
+        if flag == "--check" {
+            options.check = true;
+        } else if !set_path(&mut options, flag, args.next().map(PathBuf::from)) {
+            return Err(flag);
         }
     }
     Ok(options)
