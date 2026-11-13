@@ -85,9 +85,10 @@ async fn feed(
 }
 
 /// Waits for the first list of rooms, then until every room shows a last message in its event
-/// cache, or the caches have been quiet for `QUIET` (rooms with no message never will): the SDK
-/// fills them in the background after a response, and a first `Reset` without the last
-/// messages would show empty rows. None if the streams end.
+/// cache, or the caches went quiet for `QUIET` after some news (rooms with no message never
+/// show one), or `SETTLE_MAX` went by: the SDK fills the caches in the background after a
+/// response, and a first `Reset` without the last messages would show empty rows. None if
+/// the streams end.
 /// ponytail: polls every `TICK`, the SDK gives no signal; a slow machine shows the last
 /// messages a moment later, as `Update`s.
 async fn settle(
@@ -100,21 +101,37 @@ async fn settle(
             break;
         }
     }
-    let mut last_news = tokio::time::Instant::now();
-    while last_news.elapsed() < QUIET && !mirror.all_have_a_message().await {
-        match tokio::time::timeout(TICK, events.next()).await {
-            Ok(Some(Event::Diffs(diffs))) => {
-                mirror.absorb(diffs);
-                last_news = tokio::time::Instant::now();
-            }
-            Ok(Some(_)) => last_news = tokio::time::Instant::now(),
-            Ok(None) => return None,
-            Err(_) => {}
+    let start = tokio::time::Instant::now();
+    let mut last_news: Option<tokio::time::Instant> = None;
+    while start.elapsed() < SETTLE_MAX && !quiet(last_news) && !mirror.all_have_a_message().await {
+        if listen(events, mirror).await? {
+            last_news = Some(tokio::time::Instant::now());
         }
     }
     Some(())
 }
 
+fn quiet(last_news: Option<tokio::time::Instant>) -> bool {
+    last_news.is_some_and(|at| at.elapsed() >= QUIET)
+}
+
+/// Waits `TICK` for an event: Some(true) if one came, Some(false) if none, None if the streams ended.
+async fn listen(
+    events: &mut (impl Stream<Item = Event> + Unpin),
+    mirror: &mut Mirror,
+) -> Option<bool> {
+    match tokio::time::timeout(TICK, events.next()).await {
+        Ok(Some(Event::Diffs(diffs))) => {
+            mirror.absorb(diffs);
+            Some(true)
+        }
+        Ok(Some(_)) => Some(true),
+        Ok(None) => None,
+        Err(_) => Some(false),
+    }
+}
+
+const SETTLE_MAX: Duration = Duration::from_secs(2);
 const TICK: Duration = Duration::from_millis(25);
 const QUIET: Duration = Duration::from_millis(400);
 const NEW_ROOM_PAUSE: Duration = Duration::from_millis(150);
