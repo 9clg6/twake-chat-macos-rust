@@ -181,3 +181,31 @@ pub(crate) fn avatars(root: &Map<String, Value>) -> Res<String> {
         quoted.join(", ")
     ))
 }
+
+const OPACITIES: [(&str, &str); 5] = [
+    ("hoverOpacity", "hover"),
+    ("selectedOpacity", "selected"),
+    ("disabledOpacity", "disabled"),
+    ("ghostOpacity", "ghost"),
+    ("hoverGhostOpacity", "hover_ghost"),
+];
+
+/// `palette.action.*Opacity` of one scheme as `OPACITY_<MODE>`; nothing when the scheme has no
+/// such keys (a trimmed fixture), an error when only some of them are there.
+pub(crate) fn opacities(mode: &str, palette: &Map<String, Value>) -> Res<String> {
+    let Some(action) = palette.get("action").and_then(Value::as_object) else {
+        return Ok(String::new());
+    };
+    let mut fields = String::new();
+    for (json, field) in OPACITIES {
+        match action.get(json).and_then(Value::as_f64) {
+            Some(value) => fields.push_str(&format!("    {field}: {value:?},\n")),
+            None if fields.is_empty() => return Ok(String::new()),
+            None => return fail(format!("scheme {mode} action has no {json}")),
+        }
+    }
+    Ok(format!(
+        "pub const OPACITY_{}: ActionOpacities = ActionOpacities {{\n{fields}}};\n\n",
+        mode.to_uppercase()
+    ))
+}

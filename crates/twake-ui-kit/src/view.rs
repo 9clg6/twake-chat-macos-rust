@@ -3,11 +3,15 @@
 
 use std::borrow::Cow;
 
+mod parts;
 mod text_element;
 mod text_input;
 pub mod text_keys;
 mod text_layout;
 
+pub use parts::{
+    chip, dialog, icon_button, menu_item, menu_panel, menu_separator, presence_dot, tooltip,
+};
 pub use text_input::{Submit, TextInput};
 
 use twake_gpui::{
@@ -86,6 +90,7 @@ pub struct Button {
     size: ButtonSize,
     theme: Theme,
     disabled: bool,
+    shown: Option<ButtonState>,
     focus: Option<FocusHandle>,
     on_click: Option<ClickListener>,
 }
@@ -100,6 +105,7 @@ pub fn button(id: impl Into<SharedString>, label: impl Into<SharedString>, theme
         size: ButtonSize::Medium,
         theme,
         disabled: false,
+        shown: None,
         focus: None,
         on_click: None,
     }
@@ -127,6 +133,12 @@ impl Button {
     /// A disabled button takes no hover and no click.
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Draws the button frozen in this state (the gallery); hover and click stay live.
+    pub fn shown_as(mut self, state: ButtonState) -> Self {
+        self.shown = Some(state);
         self
     }
 
@@ -168,10 +180,9 @@ impl IntoElement for Button {
 
 impl RenderOnce for Button {
     fn render(self, _window: &mut Window, _cx: &mut App) -> impl IntoElement {
-        let state = if self.disabled {
-            ButtonState::Disabled
-        } else {
-            ButtonState::Rest
+        let state = match (self.disabled, self.shown) {
+            (true, _) => ButtonState::Disabled,
+            (false, shown) => shown.unwrap_or(ButtonState::Rest),
         };
         let rest = self.resolve(state);
         let font = rest.font;
@@ -194,6 +205,7 @@ impl RenderOnce for Button {
                 .border(px(border.width_px))
                 .border_color(hsla(border.color));
         }
+        base = parts::ringed(base, rest.focus_ring);
         if self.disabled {
             return base
                 .cursor_not_allowed()
@@ -209,12 +221,13 @@ impl RenderOnce for Button {
             .active(move |style| style.bg(hsla(pressed.background)));
         if let (Some(handle), Some(ring)) = (self.focus.as_ref(), ring) {
             base = base.track_focus(handle).focus(move |style| {
+                // Inset: an outer spread would show through a translucent fill and overflow the box.
                 style.shadow(vec![BoxShadow {
                     color: hsla(ring.color),
                     offset: point(px(0.0), px(0.0)),
                     blur_radius: px(0.0),
                     spread_radius: px(ring.width_px),
-                    inset: false,
+                    inset: true,
                 }])
             });
         }

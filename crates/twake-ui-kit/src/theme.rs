@@ -1,6 +1,6 @@
 //! The theme: which colour scheme of `twake-tokens` is active.
 
-use twake_tokens::{DARK, LIGHT, Scheme};
+use twake_tokens::{ActionOpacities, DARK, LIGHT, OPACITY_DARK, OPACITY_LIGHT, Scheme};
 
 /// Light or dark.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,6 +38,14 @@ impl Theme {
         match self.scheme {
             ColorScheme::Light => &LIGHT,
             ColorScheme::Dark => &DARK,
+        }
+    }
+
+    /// The opacities of interaction states of the active scheme.
+    pub fn opacities(&self) -> &'static ActionOpacities {
+        match self.scheme {
+            ColorScheme::Light => &OPACITY_LIGHT,
+            ColorScheme::Dark => &OPACITY_DARK,
         }
     }
 
