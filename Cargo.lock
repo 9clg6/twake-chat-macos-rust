@@ -8257,6 +8257,7 @@ name = "twake-store"
 version = "0.1.0"
 dependencies = [
  "futures",
+ "thiserror 2.0.21",
  "twake-app",
  "twake-domain",
  "twake-testing",
