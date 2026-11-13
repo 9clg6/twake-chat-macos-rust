@@ -3,21 +3,20 @@
 use twake_app::room_list::RoomListState;
 use twake_domain::{RoomId, Timestamp};
 use twake_gpui::{
-    AnyElement, Context, EventEmitter, InteractiveElement, IntoElement, ParentElement, Render,
-    ScrollWheelEvent, StatefulInteractiveElement, Styled, Window, div, px,
+    AnyElement, Context, EventEmitter, FontWeight, InteractiveElement, IntoElement, ParentElement,
+    Render, ScrollWheelEvent, StatefulInteractiveElement, Styled, Window, div, px,
 };
 use twake_i18n::Locale;
-use twake_ui_kit::theme::{ColorScheme, Theme};
+use twake_ui_kit::theme::Theme;
 use twake_ui_kit::view::hsla;
 
 use super::{HEADER_HEIGHT, OVERSCAN, avatar, clamp, scrolled, viewport};
-use crate::room_row::{BadgeStyle, BadgeView, RoomRowView};
+use crate::room_row::{BadgeView, RoomRowView};
+use crate::room_row_style::{BadgeSpec, LIST_WIDTH_PX, ROW_HEIGHT_PX, RowState, RowStyle};
 use crate::virtual_list::HeightIndex;
 
-/// Height of every row, in pixels (fixed, so the window needs no measure).
-const ROW_HEIGHT: f32 = 72.0;
-/// Width of the column.
-pub const LIST_WIDTH: f32 = 340.0;
+/// Rows keep one height (so the window needs no measure).
+const ROW_HEIGHT: f32 = ROW_HEIGHT_PX;
 
 /// A row was clicked.
 pub struct RoomSelected(pub RoomId);
@@ -60,20 +59,24 @@ impl RoomListView {
 
     fn row(&self, position: usize, cx: &mut Context<Self>) -> Option<AnyElement> {
         let (id, row) = self.rows.get(position)?;
-        let colors = self.theme.colors();
-        let background = if self.selected.as_ref() == Some(id) {
-            // `primary.light` is a pale blue, unreadable under the light text of the dark scheme.
-            if self.theme.scheme == ColorScheme::Dark {
-                colors.primary.dark
-            } else {
-                colors.primary.light
-            }
-        } else {
-            colors.background.paper
-        };
-        let hover = colors.background.contrast;
+        let selected = self.selected.as_ref() == Some(id);
+        let rest = RowStyle::resolve(
+            RowState {
+                selected,
+                hovered: false,
+            },
+            &self.theme,
+        );
+        let hover = RowStyle::resolve(
+            RowState {
+                selected,
+                hovered: true,
+            },
+            &self.theme,
+        )
+        .background;
         let target = id.clone();
-        let content = row_content(row, self.theme);
+        let content = row_content(row, &rest, self.theme);
         Some(
             div()
                 .id(("room", position))
@@ -82,7 +85,7 @@ impl RoomListView {
                 .left(px(0.0))
                 .w_full()
                 .h(px(ROW_HEIGHT))
-                .bg(hsla(background))
+                .bg(hsla(rest.background))
                 .hover(move |style| style.bg(hsla(hover)))
                 .cursor_pointer()
                 .on_click(cx.listener(move |this, _, _, cx| this.select(target.clone(), cx)))
@@ -92,14 +95,15 @@ impl RoomListView {
     }
 }
 
-fn row_content(row: &RoomRowView, theme: Theme) -> impl IntoElement {
+fn row_content(row: &RoomRowView, style: &RowStyle, theme: Theme) -> impl IntoElement {
     let colors = theme.colors();
     let preview = row.preview.clone().unwrap_or_default();
     let title = div()
         .overflow_hidden()
         .whitespace_nowrap()
         .text_ellipsis()
-        .text_size(px(15.0))
+        .text_size(px(style.name_font.font_size))
+        .font_weight(FontWeight(f32::from(style.name_font.font_weight)))
         .child(row.title.clone());
     let tail = div()
         .flex()
@@ -116,9 +120,9 @@ fn row_content(row: &RoomRowView, theme: Theme) -> impl IntoElement {
         .items_center()
         .size_full()
         .px(px(16.0))
-        .gap(px(12.0))
+        .gap(px(style.gap_px))
         .text_color(hsla(colors.text.primary))
-        .child(avatar(&row.avatar, 44.0))
+        .child(avatar(&row.avatar, style.avatar_px))
         .child(
             div()
                 .flex()
@@ -141,24 +145,19 @@ fn row_content(row: &RoomRowView, theme: Theme) -> impl IntoElement {
 }
 
 fn badge_view(badge: &BadgeView, theme: Theme) -> impl IntoElement {
-    let colors = theme.colors();
-    let (background, text) = match badge.style {
-        BadgeStyle::Normal => (colors.primary.main, colors.primary.contrast_text),
-        BadgeStyle::Mention => (colors.error.main, colors.error.contrast_text),
-        BadgeStyle::Muted => (colors.secondary.main, colors.secondary.contrast_text),
-    };
-    let size = if badge.text.is_empty() { 10.0 } else { 20.0 };
+    let spec = BadgeSpec::resolve(badge.style, badge.text.is_empty(), &theme);
     div()
         .flex()
         .items_center()
         .justify_center()
-        .min_w(px(size))
-        .h(px(size))
-        .px(px(if badge.text.len() > 1 { 6.0 } else { 0.0 }))
-        .rounded_full()
-        .bg(hsla(background))
-        .text_color(hsla(text))
-        .text_size(px(11.0))
+        .min_w(px(spec.min_width_px))
+        .h(px(spec.height_px))
+        .px(px(spec.padding_x_px))
+        .rounded(px(spec.radius_px))
+        .bg(hsla(spec.background))
+        .text_color(hsla(spec.text))
+        .text_size(px(spec.font_size_px))
+        .font_weight(FontWeight(f32::from(spec.font_weight)))
         .child(badge.text.clone())
 }
 
@@ -175,7 +174,7 @@ impl Render for RoomListView {
             .flex()
             .flex_col()
             .flex_none()
-            .w(px(LIST_WIDTH))
+            .w(px(LIST_WIDTH_PX))
             .h_full()
             .bg(hsla(colors.background.paper))
             .border_r_1()

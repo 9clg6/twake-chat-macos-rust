@@ -7,6 +7,7 @@ use xtask::Error;
 use xtask::check_deps::{Rules, check, load_graph};
 use xtask::icons;
 use xtask::tokens;
+use xtask::upstream;
 
 fn check_deps() -> ExitCode {
     let manifest = Path::new(env!("CARGO_MANIFEST_DIR")).join("../Cargo.toml");
@@ -41,6 +42,8 @@ struct Task {
     input: &'static str,
     output: &'static str,
     generate: fn(&str) -> Result<String, Error>,
+    /// The script that exports `input` from the React checkout, for `--check`.
+    script: Option<&'static str>,
 }
 
 const TOKENS: Task = Task {
@@ -48,6 +51,7 @@ const TOKENS: Task = Task {
     input: "docs/spec/tokens.json",
     output: "crates/twake-tokens/src/generated.rs",
     generate: tokens::generate,
+    script: Some("docs/spec/export-tokens.mjs"),
 };
 
 const ICONS: Task = Task {
@@ -55,12 +59,25 @@ const ICONS: Task = Task {
     input: "docs/spec/icons.json",
     output: "crates/twake-icons/src/generated.rs",
     generate: icons::generate,
+    script: None,
 };
 
 struct Options {
     input: PathBuf,
     output: PathBuf,
     check: bool,
+    exporter: Option<PathBuf>,
+}
+
+/// A flag that takes a file: false when the flag is unknown or lacks its value.
+fn set_path(options: &mut Options, flag: &str, path: Option<PathBuf>) -> bool {
+    match (flag, path) {
+        ("--input", Some(path)) => options.input = path,
+        ("--output", Some(path)) => options.output = path,
+        ("--exporter", Some(path)) => options.exporter = Some(path),
+        _ => return false,
+    }
+    true
 }
 
 /// The flag that is unknown, or that lacks its value.
@@ -69,15 +86,14 @@ fn parse_options<'a>(task: &Task, args: &'a [String]) -> Result<Options, &'a Str
         input: workspace_file(task.input),
         output: workspace_file(task.output),
         check: false,
+        exporter: None,
     };
     let mut args = args.iter();
     while let Some(flag) = args.next() {
-        let mut value = || args.next().map(PathBuf::from).ok_or(flag);
-        match flag.as_str() {
-            "--check" => options.check = true,
-            "--input" => options.input = value()?,
-            "--output" => options.output = value()?,
-            _ => return Err(flag),
+        if flag == "--check" {
+            options.check = true;
+        } else if !set_path(&mut options, flag, args.next().map(PathBuf::from)) {
+            return Err(flag);
         }
     }
     Ok(options)
@@ -89,11 +105,39 @@ fn render(task: &Task, input: &Path) -> Result<String, String> {
     (task.generate)(&json).map_err(|error| error.to_string())
 }
 
+/// 0 when `input` is what the exporter makes now (or no exporter can run here), 1 when it differs,
+/// 2 when the exporter fails.
+fn check_upstream(task: &Task, options: &Options) -> ExitCode {
+    let script = task.script.map(workspace_file);
+    let checkout = std::env::var("TWAKE_SPACE_CHAT_DIR").ok();
+    let Some((mut command, program)) =
+        upstream::exporter(options.exporter.as_deref(), script.as_deref(), checkout)
+    else {
+        return ExitCode::SUCCESS;
+    };
+    let name = task.name;
+    let fresh = match upstream::run(&mut command, &program) {
+        Ok(bytes) => bytes,
+        Err(message) => {
+            eprintln!("{name}: {message}");
+            return ExitCode::from(2);
+        }
+    };
+    if std::fs::read(&options.input).is_ok_and(|current| current == fresh) {
+        return ExitCode::SUCCESS;
+    }
+    let (input, script) = (options.input.display(), task.script.unwrap_or(&program));
+    eprintln!(
+        "{name}: {input} differs from what {program} exports; refresh it with `node {script} <twake-space-chat> > {input}`, then `cargo xtask {name}`"
+    );
+    ExitCode::FAILURE
+}
+
 fn store(task: &Task, options: &Options, text: String) -> ExitCode {
     let (name, output) = (task.name, &options.output);
     if options.check {
         if std::fs::read_to_string(output).is_ok_and(|current| current == text) {
-            return ExitCode::SUCCESS;
+            return check_upstream(task, options);
         }
         eprintln!(
             "{name}: {} is stale; run `cargo xtask {name}`",
@@ -110,14 +154,14 @@ fn store(task: &Task, options: &Options, text: String) -> ExitCode {
     }
 }
 
-/// `<task> [--input FILE] [--output FILE] [--check]`: 0 done, 1 stale (`--check`), 2 failure.
+/// `<task> [--input FILE] [--output FILE] [--check [--exporter PROGRAM]]`: 0 done, 1 stale (`--check`), 2 failure.
 fn run(task: &Task, args: &[String]) -> ExitCode {
     let name = task.name;
     let options = match parse_options(task, args) {
         Ok(options) => options,
         Err(flag) => {
             eprintln!(
-                "{name}: unexpected {flag}; usage: cargo xtask {name} [--input FILE] [--output FILE] [--check]"
+                "{name}: unexpected {flag}; usage: cargo xtask {name} [--input FILE] [--output FILE] [--check [--exporter PROGRAM]]"
             );
             return ExitCode::from(2);
         }

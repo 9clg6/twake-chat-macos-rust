@@ -3,6 +3,7 @@
 use serde_json::{Map, Value};
 
 use crate::common::{Res, fail, object, root as parse_root, string};
+use crate::tokens_design::{avatars, shadows, theme};
 
 pub use crate::common::Error;
 
@@ -32,7 +33,18 @@ const TONE_KEYS: [(&str, &str); 4] = [
     ("dark", "dark"),
     ("contrastText", "contrast_text"),
 ];
-const GROUPS: [(&str, &[(&str, &str)]); 3] = [
+const GROUPS: [(&str, &[(&str, &str)]); 4] = [
+    (
+        "action",
+        &[
+            ("active", "active"),
+            ("hover", "hover"),
+            ("selected", "selected"),
+            ("disabled", "disabled"),
+            ("disabledBackground", "disabled_background"),
+            ("focus", "focus"),
+        ],
+    ),
     (
         "text",
         &[
@@ -119,7 +131,7 @@ fn alpha(text: Option<&str>) -> Option<u8> {
     }
 }
 
-fn color(text: &str) -> Res<String> {
+pub(crate) fn color(text: &str) -> Res<String> {
     match hex(text).or_else(|| functional(text)) {
         Some([r, g, b, a]) => Ok(format!("Rgba8::new({r}, {g}, {b}, {a})")),
         None => fail(format!("unsupported colour {text:?}")),
@@ -183,6 +195,7 @@ fn struct_of(name: &str) -> &'static str {
         "text" => "TextColors",
         "background" => "BackgroundColors",
         "border" => "BorderColors",
+        "action" => "ActionColors",
         _ => "Tone",
     }
 }
@@ -205,6 +218,7 @@ fn scheme(mode: &str, raw: &Value) -> Res<String> {
     }
     let divider = colour_of(palette, "divider", &format!("scheme {mode}"))?;
     text.push_str(&format!("    divider: {divider},\n}};\n\n"));
+    text.push_str(&shadows(mode, object(raw, "scheme")?)?);
     Ok(text)
 }
 
@@ -354,15 +368,25 @@ fn version(root: &Map<String, Value>) -> Res<&str> {
     }
 }
 
-fn body(root: &Map<String, Value>) -> Res<String> {
+/// Lengths: spacing, shape, radii and breakpoints.
+fn sizes(root: &Map<String, Value>) -> Res<String> {
     Ok([
-        palettes(root)?,
-        schemes(root)?,
         single(root, "spacing", "unit", "SPACING")?,
         single(root, "shape", "borderRadius", "SHAPE_RADIUS")?,
         lengths(root, "radius", &RADII, "RADIUS_")?,
         lengths(root, "breakpoints", &BREAKPOINTS, "BREAKPOINT_")?,
+    ]
+    .concat())
+}
+
+fn body(root: &Map<String, Value>) -> Res<String> {
+    Ok([
+        palettes(root)?,
+        schemes(root)?,
+        sizes(root)?,
         typography(root)?,
+        theme(root)?,
+        avatars(root)?,
     ]
     .concat())
 }

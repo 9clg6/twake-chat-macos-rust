@@ -74,6 +74,7 @@ fn scheme(paper: &str, text_secondary: &str, divider: &str) -> String {
          \"text\":{{\"primary\":\"#fff\",\"secondary\":\"{text_secondary}\",\"disabled\":\"rgba(0, 0, 0, 1)\",\"icon\":\"#fff\"}},\
          \"background\":{{\"default\":\"#F3F6F9\",\"paper\":\"{paper}\",\"contrast\":\"rgba(66, 66, 68, 0.048)\"}},\
          \"border\":{{\"main\":\"#111111\",\"disabled\":\"#222222\",\"ghost\":\"#333333\",\"ghostDisabled\":\"#444444\"}},\
+         \"action\":{{\"active\":\"#fff\",\"hover\":\"rgba(255, 255, 255, 0.08)\",\"selected\":\"rgba(255, 255, 255, 0.16)\",\"disabled\":\"rgba(255, 255, 255, 0.32)\",\"disabledBackground\":\"rgba(255, 255, 255, 0.12)\",\"focus\":\"rgba(255, 255, 255, 0.24)\"}},\
          \"divider\":\"{divider}\"}},\"shadows\":[\"none\"]}}"
     )
 }

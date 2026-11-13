@@ -156,6 +156,14 @@ pub const LIGHT: Scheme = Scheme {
         dark: Rgba8::new(0, 121, 107, 255),
         contrast_text: Rgba8::new(255, 255, 255, 255),
     },
+    action: ActionColors {
+        active: Rgba8::new(66, 66, 68, 143),
+        hover: Rgba8::new(66, 66, 68, 10),
+        selected: Rgba8::new(66, 66, 68, 20),
+        disabled: Rgba8::new(66, 66, 68, 61),
+        disabled_background: Rgba8::new(66, 66, 68, 31),
+        focus: Rgba8::new(66, 66, 68, 31),
+    },
     text: TextColors {
         primary: Rgba8::new(66, 66, 68, 230),
         secondary: Rgba8::new(66, 66, 68, 163),
@@ -175,6 +183,35 @@ pub const LIGHT: Scheme = Scheme {
     },
     divider: Rgba8::new(66, 66, 68, 31),
 };
+
+pub const SHADOWS_LIGHT: [&str; 26] = [
+    "none",
+    "0px 2px 4px 0px rgba(66, 66, 68, 0.08), 0px 4px 16px 0px rgba(66, 66, 68, 0.06), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 3px 5px 0px rgba(66, 66, 68, 0.09), 0px 4px 17px 0px rgba(66, 66, 68, 0.07), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 3px 5px -1px rgba(66, 66, 68, 0.09), 0px 5px 19px 1px rgba(66, 66, 68, 0.08), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 3px 6px -1px rgba(66, 66, 68, 0.1), 0px 5px 20px 1px rgba(66, 66, 68, 0.08), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 4px 6px -1px rgba(66, 66, 68, 0.11), 0px 5px 22px 1px rgba(66, 66, 68, 0.09), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 4px 7px -2px rgba(66, 66, 68, 0.11), 0px 6px 23px 2px rgba(66, 66, 68, 0.1), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 5px 7px -2px rgba(66, 66, 68, 0.12), 0px 6px 24px 2px rgba(66, 66, 68, 0.11), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 5px 8px -2px rgba(66, 66, 68, 0.13), 0px 6px 26px 2px rgba(66, 66, 68, 0.11), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 5px 8px -3px rgba(66, 66, 68, 0.14), 0px 7px 27px 3px rgba(66, 66, 68, 0.12), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 6px 9px -3px rgba(66, 66, 68, 0.14), 0px 7px 29px 3px rgba(66, 66, 68, 0.13), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 6px 9px -3px rgba(66, 66, 68, 0.15), 0px 7px 30px 3px rgba(66, 66, 68, 0.14), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 7px 10px -4px rgba(66, 66, 68, 0.16), 0px 8px 31px 4px rgba(66, 66, 68, 0.15), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 7px 10px -4px rgba(66, 66, 68, 0.16), 0px 8px 33px 4px rgba(66, 66, 68, 0.15), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 8px 11px -5px rgba(66, 66, 68, 0.17), 0px 9px 34px 5px rgba(66, 66, 68, 0.16), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 8px 11px -5px rgba(66, 66, 68, 0.18), 0px 9px 35px 5px rgba(66, 66, 68, 0.17), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 9px 12px -5px rgba(66, 66, 68, 0.18), 0px 9px 37px 5px rgba(66, 66, 68, 0.18), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 9px 12px -6px rgba(66, 66, 68, 0.19), 0px 10px 38px 6px rgba(66, 66, 68, 0.19), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 9px 13px -6px rgba(66, 66, 68, 0.2), 0px 10px 40px 6px rgba(66, 66, 68, 0.19), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 10px 13px -6px rgba(66, 66, 68, 0.21), 0px 10px 41px 6px rgba(66, 66, 68, 0.2), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 10px 14px -7px rgba(66, 66, 68, 0.21), 0px 11px 42px 7px rgba(66, 66, 68, 0.21), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 11px 14px -7px rgba(66, 66, 68, 0.22), 0px 11px 44px 7px rgba(66, 66, 68, 0.22), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 11px 15px -7px rgba(66, 66, 68, 0.23), 0px 11px 45px 7px rgba(66, 66, 68, 0.22), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 12px 15px -8px rgba(66, 66, 68, 0.23), 0px 12px 47px 8px rgba(66, 66, 68, 0.23), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 12px 16px -8px rgba(66, 66, 68, 0.24), 0px 12px 48px 8px rgba(66, 66, 68, 0.24), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
+    "0px 1px 4px rgba(66, 66, 68, 0.04)",
+];
 
 pub const DARK: Scheme = Scheme {
     primary: Tone {
@@ -213,6 +250,14 @@ pub const DARK: Scheme = Scheme {
         dark: Rgba8::new(29, 233, 182, 255),
         contrast_text: Rgba8::new(66, 66, 68, 230),
     },
+    action: ActionColors {
+        active: Rgba8::new(255, 255, 255, 255),
+        hover: Rgba8::new(255, 255, 255, 20),
+        selected: Rgba8::new(255, 255, 255, 41),
+        disabled: Rgba8::new(255, 255, 255, 82),
+        disabled_background: Rgba8::new(255, 255, 255, 31),
+        focus: Rgba8::new(255, 255, 255, 61),
+    },
     text: TextColors {
         primary: Rgba8::new(255, 255, 255, 255),
         secondary: Rgba8::new(255, 255, 255, 163),
@@ -232,6 +277,35 @@ pub const DARK: Scheme = Scheme {
     },
     divider: Rgba8::new(255, 255, 255, 41),
 };
+
+pub const SHADOWS_DARK: [&str; 26] = [
+    "none",
+    "0px 2px 4px 0px rgba(0, 0, 0, 0.08), 0px 4px 16px 0px rgba(0, 0, 0, 0.06), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 3px 5px 0px rgba(0, 0, 0, 0.09), 0px 4px 17px 0px rgba(0, 0, 0, 0.07), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 3px 5px -1px rgba(0, 0, 0, 0.09), 0px 5px 19px 1px rgba(0, 0, 0, 0.08), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 3px 6px -1px rgba(0, 0, 0, 0.1), 0px 5px 20px 1px rgba(0, 0, 0, 0.08), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 4px 6px -1px rgba(0, 0, 0, 0.11), 0px 5px 22px 1px rgba(0, 0, 0, 0.09), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 4px 7px -2px rgba(0, 0, 0, 0.11), 0px 6px 23px 2px rgba(0, 0, 0, 0.1), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 5px 7px -2px rgba(0, 0, 0, 0.12), 0px 6px 24px 2px rgba(0, 0, 0, 0.11), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 5px 8px -2px rgba(0, 0, 0, 0.13), 0px 6px 26px 2px rgba(0, 0, 0, 0.11), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 5px 8px -3px rgba(0, 0, 0, 0.14), 0px 7px 27px 3px rgba(0, 0, 0, 0.12), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 6px 9px -3px rgba(0, 0, 0, 0.14), 0px 7px 29px 3px rgba(0, 0, 0, 0.13), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 6px 9px -3px rgba(0, 0, 0, 0.15), 0px 7px 30px 3px rgba(0, 0, 0, 0.14), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 7px 10px -4px rgba(0, 0, 0, 0.16), 0px 8px 31px 4px rgba(0, 0, 0, 0.15), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 7px 10px -4px rgba(0, 0, 0, 0.16), 0px 8px 33px 4px rgba(0, 0, 0, 0.15), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 8px 11px -5px rgba(0, 0, 0, 0.17), 0px 9px 34px 5px rgba(0, 0, 0, 0.16), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 8px 11px -5px rgba(0, 0, 0, 0.18), 0px 9px 35px 5px rgba(0, 0, 0, 0.17), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 9px 12px -5px rgba(0, 0, 0, 0.18), 0px 9px 37px 5px rgba(0, 0, 0, 0.18), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 9px 12px -6px rgba(0, 0, 0, 0.19), 0px 10px 38px 6px rgba(0, 0, 0, 0.19), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 9px 13px -6px rgba(0, 0, 0, 0.2), 0px 10px 40px 6px rgba(0, 0, 0, 0.19), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 10px 13px -6px rgba(0, 0, 0, 0.21), 0px 10px 41px 6px rgba(0, 0, 0, 0.2), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 10px 14px -7px rgba(0, 0, 0, 0.21), 0px 11px 42px 7px rgba(0, 0, 0, 0.21), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 11px 14px -7px rgba(0, 0, 0, 0.22), 0px 11px 44px 7px rgba(0, 0, 0, 0.22), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 11px 15px -7px rgba(0, 0, 0, 0.23), 0px 11px 45px 7px rgba(0, 0, 0, 0.22), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 12px 15px -8px rgba(0, 0, 0, 0.23), 0px 12px 47px 8px rgba(0, 0, 0, 0.23), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 12px 16px -8px rgba(0, 0, 0, 0.24), 0px 12px 48px 8px rgba(0, 0, 0, 0.24), 0px 0px 0px 0.5px rgba(0, 0, 0, 0.12)",
+    "0px 1px 4px rgba(0, 0, 0, 0.04)",
+];
 
 pub const SPACING: f32 = 8.0;
 
@@ -354,3 +428,59 @@ pub const TYPE_OVERLINE: TypeSpec = TypeSpec {
     line_height: LineHeight::Px(13.0),
     letter_spacing: 0.4,
 };
+
+pub const Z_APP_BAR: u32 = 1100;
+
+pub const Z_DRAWER: u32 = 1200;
+
+pub const Z_FAB: u32 = 1050;
+
+pub const Z_MOBILE_STEPPER: u32 = 1000;
+
+pub const Z_MODAL: u32 = 1300;
+
+pub const Z_SNACKBAR: u32 = 1400;
+
+pub const Z_SPEED_DIAL: u32 = 1050;
+
+pub const Z_TOOLTIP: u32 = 1500;
+
+pub const DURATION_COMPLEX: u32 = 375;
+
+pub const DURATION_ENTERING_SCREEN: u32 = 225;
+
+pub const DURATION_LEAVING_SCREEN: u32 = 195;
+
+pub const DURATION_SHORT: u32 = 250;
+
+pub const DURATION_SHORTER: u32 = 200;
+
+pub const DURATION_SHORTEST: u32 = 150;
+
+pub const DURATION_STANDARD: u32 = 300;
+
+pub const EASE_IN: [f32; 4] = [0.4, 0.0, 1.0, 1.0];
+
+pub const EASE_IN_OUT: [f32; 4] = [0.4, 0.0, 0.2, 1.0];
+
+pub const EASE_OUT: [f32; 4] = [0.0, 0.0, 0.2, 1.0];
+
+pub const SHARP: [f32; 4] = [0.4, 0.0, 0.6, 1.0];
+
+pub const FONT_FAMILY: &str = "\"Inter\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,\"Helvetica Neue\",Arial,sans-serif,\"Apple Color Emoji\",\"Segoe UI Emoji\",\"Segoe UI Symbol\"";
+
+pub const AVATAR_COLOR_NAMES: [&str; 11] = ["sunrise", "downy", "sugarCoral", "pinkBonnet", "blueMana", "nightBlue", "snowPea", "pluviophile", "cornflower", "paleGreen", "moonBlue"];
+
+pub const AVATAR_GRADIENTS: [Gradient; 11] = [
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(248, 210, 128, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(242, 172, 105, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(129, 234, 212, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(98, 198, 183, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(241, 158, 134, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(249, 89, 103, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(228, 171, 240, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(217, 110, 237, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(133, 217, 253, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(42, 158, 252, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(128, 174, 255, 255), at_percent: 39.32 }, to: GradientStop { color: Rgba8::new(136, 61, 254, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(189, 244, 161, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(82, 206, 100, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(161, 214, 244, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(82, 206, 194, 255), at_percent: 96.03 } },
+    Gradient { angle_deg: 135.0, from: GradientStop { color: Rgba8::new(134, 217, 211, 255), at_percent: 0.0 }, to: GradientStop { color: Rgba8::new(28, 207, 180, 255), at_percent: 100.0 } },
+    Gradient { angle_deg: 135.0, from: GradientStop { color: Rgba8::new(226, 250, 23, 255), at_percent: 0.0 }, to: GradientStop { color: Rgba8::new(117, 216, 203, 255), at_percent: 100.0 } },
+    Gradient { angle_deg: 136.0, from: GradientStop { color: Rgba8::new(109, 207, 255, 255), at_percent: 14.84 }, to: GradientStop { color: Rgba8::new(61, 136, 248, 255), at_percent: 96.03 } },
+];

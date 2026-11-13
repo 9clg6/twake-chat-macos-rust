@@ -3,21 +3,27 @@
 use std::time::Instant;
 
 use twake_gpui::{
-    AnyElement, AnyView, Context, Div, InteractiveElement, IntoElement, ParentElement, Render,
-    ScrollWheelEvent, Styled, Window, div, px,
+    AnyElement, AnyView, BoxShadow, Context, Div, Hsla, InteractiveElement, IntoElement,
+    ParentElement, Render, ScrollWheelEvent, Styled, Window, div, point, px,
 };
 use twake_ui_kit::theme::Theme;
 use twake_ui_kit::view::hsla;
 
 use super::{HEADER_HEIGHT, OVERSCAN, avatar, clamp, scrolled, viewport};
+use crate::bubble_style::{BubbleStyle, wallpaper};
+use crate::room_row_style::LIST_WIDTH_PX;
 use crate::timeline_rows::{BubbleView, QuoteView, RowView, Side, Ticks};
 use crate::virtual_list::HeightIndex;
 
-const BUBBLE_MAX_WIDTH: f32 = 440.0;
-const BUBBLE_PADDING: f32 = 12.0;
-const TEXT_SIZE: f32 = 14.0;
-const LINE_HEIGHT: f32 = 20.0;
-const AVERAGE_CHAR_WIDTH: f32 = 7.4;
+/// Width of the column before the first draw, until the window says its own.
+const ESTIMATE_COLUMN: f32 = 800.0;
+/// Average width of a character of the 15 px body text.
+const AVERAGE_CHAR_WIDTH: f32 = 7.0;
+const CAPTION_PX: f32 = 12.0;
+const DIVIDER_PADDING_X: f32 = 12.0;
+/// Padding of a line of the conversation, and the gap between its avatar and its bubble.
+const LINE_PADDING: f32 = 16.0;
+const LINE_GAP: f32 = 8.0;
 const SLOT_GAP: f32 = 4.0;
 const FOOTER_HEIGHT: f32 = 16.0;
 const NAME_HEIGHT: f32 = 18.0;
@@ -27,8 +33,13 @@ const AVATAR_SIZE: f32 = 32.0;
 /// Vertical padding of the bar that holds the footer, and its top border.
 const BAR_PADDING: f32 = 8.0;
 const BAR_BORDER: f32 = 1.0;
+/// `0 1px 1px rgba(0, 0, 0, 0.1)` under a bubble, as in `MessageBubble.tsx`.
+const SHADOW_ALPHA: f32 = 0.1;
 const BENCH_FRAMES: usize = 600;
 const BENCH_STEP: f32 = 48.0;
+
+#[cfg(test)]
+mod tests;
 
 /// Lines a text takes in a bubble, filling each line with words greedily.
 fn wrap_lines(text: &str, per_line: usize) -> usize {
@@ -46,15 +57,26 @@ fn wrap_lines(text: &str, per_line: usize) -> usize {
             lines += length.saturating_sub(1) / per_line;
         }
     }
-    lines.max(1)
+    lines
+}
+
+/// Width a bubble may fill in a column `column_px` wide: the line without its padding and, for
+/// others, without the avatar and its gap.
+fn container_px(side: Side, column_px: f32) -> f32 {
+    let line = column_px - 2.0 * LINE_PADDING;
+    match side {
+        Side::Own => line,
+        Side::Other => line - AVATAR_SIZE - LINE_GAP,
+    }
 }
 
 /// The height a row is given: an estimate, since the text is not measured before it is drawn.
-fn estimated_height(row: &RowView) -> f32 {
+fn estimated_height(row: &RowView, theme: Theme, column_px: f32) -> f32 {
     let RowView::Bubble(bubble) = row else {
         return DIVIDER_HEIGHT;
     };
-    let width = BUBBLE_MAX_WIDTH - 2.0 * BUBBLE_PADDING;
+    let style = BubbleStyle::resolve(bubble.side, &theme, container_px(bubble.side, column_px));
+    let width = style.max_width_px - 2.0 * style.padding_x_px;
     let per_line = (width / AVERAGE_CHAR_WIDTH) as usize;
     let lines = wrap_lines(&bubble.body, per_line) as f32;
     let name = if bubble.shows_name { NAME_HEIGHT } else { 0.0 };
@@ -63,7 +85,12 @@ fn estimated_height(row: &RowView) -> f32 {
     } else {
         0.0
     };
-    SLOT_GAP + 2.0 * BUBBLE_PADDING * 0.67 + lines * LINE_HEIGHT + FOOTER_HEIGHT + name + quote
+    SLOT_GAP
+        + 2.0 * style.padding_y_px
+        + lines * style.line_height_px
+        + FOOTER_HEIGHT
+        + name
+        + quote
 }
 
 /// Frame times of an automatic scroll, printed on stderr when it ends.
@@ -111,6 +138,7 @@ pub struct TimelineView {
     footer: Option<AnyView>,
     footer_height: f32,
     at_bottom: bool,
+    column_px: f32,
 }
 
 impl TimelineView {
@@ -127,6 +155,7 @@ impl TimelineView {
             footer: None,
             footer_height: 0.0,
             at_bottom: true,
+            column_px: ESTIMATE_COLUMN,
         }
     }
 
@@ -145,12 +174,26 @@ impl TimelineView {
 
     /// Shows another room, scrolled to its newest message.
     pub fn set_conversation(&mut self, title: String, rows: Vec<RowView>, cx: &mut Context<Self>) {
-        let heights: Vec<f32> = rows.iter().map(estimated_height).collect();
+        let heights: Vec<f32> = rows
+            .iter()
+            .map(|row| estimated_height(row, self.theme, self.column_px))
+            .collect();
         self.index = HeightIndex::new(&heights);
         self.title = title;
         self.rows = rows;
         self.stick_to_bottom = true;
         cx.notify();
+    }
+
+    /// Estimates the heights again for a column of another width.
+    fn resize_column(&mut self, column_px: f32) {
+        self.column_px = column_px;
+        let heights: Vec<f32> = self
+            .rows
+            .iter()
+            .map(|row| estimated_height(row, self.theme, column_px))
+            .collect();
+        self.index = HeightIndex::new(&heights);
     }
 
     /// Scrolls up and down by itself for a few hundred frames, then prints the frame times.
@@ -205,7 +248,9 @@ impl TimelineView {
         let row = self.rows.get(position)?;
         let height = self.index.offset(position + 1) - self.index.offset(position);
         let content = match row {
-            RowView::Bubble(bubble) => bubble_slot(bubble, self.theme).into_any_element(),
+            RowView::Bubble(bubble) => {
+                bubble_slot(bubble, self.column_px, self.theme).into_any_element()
+            }
             RowView::Day(day) => divider(&day.label, false, self.theme).into_any_element(),
             RowView::NewMessages(marker) => {
                 divider(&marker.label, true, self.theme).into_any_element()
@@ -239,59 +284,73 @@ fn divider(label: &str, highlighted: bool, theme: Theme) -> impl IntoElement {
         .size_full()
         .child(
             div()
-                .px(px(12.0))
+                .px(px(DIVIDER_PADDING_X))
                 .py(px(2.0))
                 .rounded_full()
                 .bg(hsla(colors.background.contrast))
-                .text_size(px(12.0))
+                .text_size(px(CAPTION_PX))
                 .text_color(hsla(ink))
                 .child(label.to_owned()),
         )
 }
 
-fn bubble_slot(bubble: &BubbleView, theme: Theme) -> impl IntoElement {
+fn bubble_slot(bubble: &BubbleView, column_px: f32, theme: Theme) -> impl IntoElement {
     let line = div()
         .flex()
         .size_full()
-        .px(px(16.0))
+        .px(px(LINE_PADDING))
         .pt(px(SLOT_GAP))
-        .gap_2();
+        .gap(px(LINE_GAP));
+    let container = container_px(bubble.side, column_px);
     match bubble.side {
-        Side::Own => line.justify_end().child(bubble_body(bubble, theme)),
+        Side::Own => line
+            .justify_end()
+            .child(bubble_body(bubble, container, theme)),
         Side::Other => {
             let side = if bubble.shows_avatar {
                 avatar(&bubble.avatar, AVATAR_SIZE)
             } else {
                 div().flex_none().w(px(AVATAR_SIZE))
             };
-            line.child(side).child(bubble_body(bubble, theme))
+            line.child(side)
+                .child(bubble_body(bubble, container, theme))
         }
     }
 }
 
-fn bubble_body(bubble: &BubbleView, theme: Theme) -> impl IntoElement {
+fn bubble_body(bubble: &BubbleView, container_px: f32, theme: Theme) -> impl IntoElement {
     let colors = theme.colors();
-    let (background, ink) = match bubble.side {
-        Side::Own => (colors.primary.main, colors.primary.contrast_text),
-        Side::Other => (colors.background.default, colors.text.primary),
-    };
+    let style = BubbleStyle::resolve(bubble.side, &theme, container_px);
     let name = bubble.shows_name.then(|| {
         div()
-            .text_size(px(12.0))
-            .text_color(hsla(colors.primary.dark))
+            .h(px(NAME_HEIGHT))
+            .text_size(px(CAPTION_PX))
+            .text_color(hsla(colors.primary.main))
             .child(bubble.author.clone())
     });
     div()
         .flex()
         .flex_col()
         .flex_initial()
-        .max_w(px(BUBBLE_MAX_WIDTH))
-        .px(px(BUBBLE_PADDING))
-        .py(px(BUBBLE_PADDING * 0.5))
-        .rounded(px(12.0))
-        .bg(hsla(background))
-        .text_color(hsla(ink))
-        .text_size(px(TEXT_SIZE))
+        .max_w(px(style.max_width_px))
+        .px(px(style.padding_x_px))
+        .py(px(style.padding_y_px))
+        .rounded(px(style.radius_px))
+        .bg(hsla(style.background))
+        .shadow(vec![BoxShadow {
+            color: Hsla {
+                h: 0.0,
+                s: 0.0,
+                l: 0.0,
+                a: SHADOW_ALPHA,
+            },
+            offset: point(px(0.0), px(1.0)),
+            blur_radius: px(1.0),
+            spread_radius: px(0.0),
+        }])
+        .text_color(hsla(style.text))
+        .text_size(px(style.font_size_px))
+        .line_height(px(style.line_height_px))
         .children(name)
         .children(bubble.quote.as_ref().map(|quote| quote_view(quote, theme)))
         .child(bubble.body.clone())
@@ -307,7 +366,7 @@ fn quote_view(quote: &QuoteView, theme: Theme) -> impl IntoElement {
         .pl_2()
         .border_l_2()
         .border_color(hsla(colors.primary.light))
-        .text_size(px(12.0))
+        .text_size(px(CAPTION_PX))
         .overflow_hidden()
         .max_h(px(QUOTE_HEIGHT - 4.0))
         .child(quote.author.clone())
@@ -340,11 +399,30 @@ fn footer(bubble: &BubbleView, _theme: Theme) -> impl IntoElement {
         .child(text)
 }
 
+fn header(title: &str, theme: Theme) -> impl IntoElement {
+    let colors = theme.colors();
+    div()
+        .flex()
+        .items_center()
+        .flex_none()
+        .h(px(HEADER_HEIGHT))
+        .px(px(16.0))
+        .bg(hsla(colors.background.paper))
+        .border_b_1()
+        .border_color(hsla(colors.divider))
+        .text_size(px(18.0))
+        .child(title.to_owned())
+}
+
 impl Render for TimelineView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let started = Instant::now();
         let colors = self.theme.colors();
         let height = viewport(window) - self.footer_height;
+        let column_px = f32::from(window.viewport_size().width) - LIST_WIDTH_PX;
+        if (column_px - self.column_px).abs() >= 1.0 {
+            self.resize_column(column_px);
+        }
         let total = self.index.total_height();
         if self.stick_to_bottom {
             self.scroll_top = total;
@@ -361,20 +439,9 @@ impl Render for TimelineView {
             .flex_1()
             .h_full()
             .min_w_0()
-            .bg(hsla(colors.background.paper))
+            .bg(hsla(wallpaper(&self.theme)))
             .text_color(hsla(colors.text.primary))
-            .child(
-                div()
-                    .flex()
-                    .items_center()
-                    .flex_none()
-                    .h(px(HEADER_HEIGHT))
-                    .px(px(16.0))
-                    .border_b_1()
-                    .border_color(hsla(colors.divider))
-                    .text_size(px(18.0))
-                    .child(self.title.clone()),
-            )
+            .child(header(&self.title, self.theme))
             .child(
                 div()
                     .relative()

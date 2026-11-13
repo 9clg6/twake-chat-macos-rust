@@ -1,5 +1,7 @@
 //! Initials and colour of an avatar (port of `getInitials` and `nameToColor` of twake-mui).
 
+use twake_ui_kit::avatar::color_index;
+
 /// The colours of twake-mui `supportedColors`.
 pub const AVATAR_COLOR_COUNT: usize = 11;
 
@@ -8,26 +10,18 @@ pub const AVATAR_COLOR_COUNT: usize = 11;
 pub struct AvatarView {
     /// One to two graphemes, upper case.
     pub initials: String,
-    /// An index of the palette, a function of the id only so a rename keeps the colour.
+    /// The gradient of twake-mui for the name (`makeKey`); a rename changes it, as on the web.
     pub color_index: usize,
 }
 
 impl AvatarView {
-    /// The avatar of `name`, coloured by `id`.
-    pub fn of(name: &str, id: &str) -> Self {
+    /// The avatar of `name`; the id colours nothing since A026 (kept for the callers).
+    pub fn of(name: &str, _id: &str) -> Self {
         Self {
             initials: initials(name),
-            color_index: color_index(id),
+            color_index: color_index(name),
         }
     }
-}
-
-/// FNV-1a, then modulo the palette.
-fn color_index(id: &str) -> usize {
-    let hash = id.bytes().fold(0xcbf2_9ce4_8422_2325_u64, |hash, byte| {
-        (hash ^ u64::from(byte)).wrapping_mul(0x0000_0100_0000_01b3)
-    });
-    (hash % AVATAR_COLOR_COUNT as u64) as usize
 }
 
 /// `@john.doe:server` reads as `john doe`.

@@ -23,8 +23,8 @@ use crate::preview_data::{PreviewData, preview_data};
 
 /// How many messages before the end the "New messages" marker stands.
 const UNREAD_TAIL: usize = 20;
-/// Own messages up to this share of the history are read by the others.
-const READ_SHARE: usize = 10;
+/// The others have read everything but this many of the newest messages.
+const UNREAD_BY_OTHERS: usize = 5;
 
 /// The two columns.
 pub struct Preview {
@@ -132,7 +132,7 @@ impl Preview {
             return;
         };
         let read_up_to = history
-            .get(history.len() - history.len() / READ_SHARE)
+            .get(history.len().saturating_sub(UNREAD_BY_OTHERS))
             .and_then(|m| m.event_id().cloned());
         let ctx = TimelineContext {
             me: &self.data.me,

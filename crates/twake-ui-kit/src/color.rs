@@ -20,3 +20,20 @@ pub fn from_gpui_rgba(color: Rgba) -> Rgba8 {
     let byte = |unit: f32| (unit * 255.0).round().clamp(0.0, 255.0) as u8;
     Rgba8::new(byte(color.r), byte(color.g), byte(color.b), byte(color.a))
 }
+
+/// `top` over `bottom` by `amount` (clamped to `0..=1`), per channel, as `color-mix(in srgb)`; the
+/// alpha of `bottom` is kept.
+pub fn mix(top: Rgba8, bottom: Rgba8, amount: f32) -> Rgba8 {
+    let amount = amount.clamp(0.0, 1.0);
+    // The clamp makes the cast exact.
+    let channel = |top: u8, bottom: u8| {
+        let (top, bottom) = (f32::from(top), f32::from(bottom));
+        (bottom + (top - bottom) * amount).round().clamp(0.0, 255.0) as u8
+    };
+    Rgba8::new(
+        channel(top.r, bottom.r),
+        channel(top.g, bottom.g),
+        channel(top.b, bottom.b),
+        bottom.a,
+    )
+}

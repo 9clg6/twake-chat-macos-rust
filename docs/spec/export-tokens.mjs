@@ -26,6 +26,7 @@ const root = resolve(process.argv[2] ?? `${process.env.HOME}/Developer/twake-spa
 const mui = `${root}/node_modules/@linagora/twake-mui`
 const { makeTheme } = await import(pathToFileURL(`${mui}/dist/lib/makeTheme.js`))
 const { radius } = await import(pathToFileURL(`${mui}/dist/lib/radius.js`))
+const { supportedColors, colorMapping } = await import(pathToFileURL(`${mui}/dist/components/Avatar/helpers.js`))
 const { default: palette } = await import(pathToFileURL(`${root}/node_modules/@linagora/twake-css/palette.json`), { with: { type: 'json' } })
 const version = createRequire(`${mui}/`)('./package.json').version
 
@@ -86,6 +87,7 @@ const out = {
   breakpoints: theme.breakpoints.values,
   zIndex: theme.zIndex,
   transitions: { duration: theme.transitions.duration, easing: theme.transitions.easing },
+  avatarColors: { supportedColors, colorMapping },
   components,
   icons
 }

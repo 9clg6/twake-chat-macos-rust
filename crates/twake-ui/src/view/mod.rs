@@ -7,7 +7,10 @@ mod timeline;
 pub use room_list::{RoomListView, RoomSelected};
 pub use timeline::TimelineView;
 
-use twake_gpui::{Div, ParentElement, ScrollWheelEvent, Styled, Window, div, px, white};
+use twake_gpui::{
+    Div, FontWeight, ParentElement, ScrollWheelEvent, Styled, Window, div, px, white,
+};
+use twake_ui_kit::avatar::{LABEL_WEIGHT, label_size_px};
 use twake_ui_kit::view::avatar_background;
 
 use crate::avatar::AvatarView;
@@ -30,7 +33,8 @@ pub(crate) fn avatar(view: &AvatarView, size: f32) -> Div {
         .rounded_full()
         .bg(avatar_background(view.color_index))
         .text_color(white())
-        .text_size(px(size * 0.4))
+        .text_size(px(label_size_px(size)))
+        .font_weight(FontWeight(f32::from(LABEL_WEIGHT)))
         .child(view.initials.clone())
 }
 

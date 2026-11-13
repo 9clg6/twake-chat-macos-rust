@@ -433,11 +433,26 @@ fn the_colour_is_a_stable_index_of_the_palette() {
     assert!(first < AVATAR_COLOR_COUNT);
 }
 
+// Lot 1 a): the colour is the one twake-mui gives to the NAME (`makeKey`), so a rename changes it
+// and two rooms with one name share it (reverses the "by id" choice of the first version).
 #[test]
-fn the_colour_does_not_change_when_the_room_is_renamed() {
-    let before = AvatarView::of("Old name", "!stable:example.org").color_index;
-    let after = AvatarView::of("A different name", "!stable:example.org").color_index;
-    assert_eq!(before, after);
+fn the_colour_is_the_key_of_the_name_as_in_twake_mui() {
+    assert_eq!(AvatarView::of("Alice", "!a:example.org").color_index, 9);
+    assert_eq!(AvatarView::of("Twake", "!a:example.org").color_index, 6);
+}
+
+#[test]
+fn two_rooms_with_the_same_name_have_the_same_colour_whatever_their_id() {
+    let one = AvatarView::of("Team", "!one:example.org").color_index;
+    let two = AvatarView::of("Team", "!two:example.org").color_index;
+    assert_eq!(one, two);
+}
+
+#[test]
+fn the_colour_follows_a_rename() {
+    let before = AvatarView::of("Alice", "!stable:example.org").color_index;
+    let after = AvatarView::of("Twake", "!stable:example.org").color_index;
+    assert_ne!(before, after);
 }
 
 #[test]
@@ -446,9 +461,9 @@ fn the_palette_has_eleven_colours() {
 }
 
 #[test]
-fn many_ids_use_most_of_the_palette_and_never_leave_it() {
+fn many_names_use_most_of_the_palette_and_never_leave_it() {
     let indexes: Vec<usize> = (0..200)
-        .map(|n| AvatarView::of("Team", &format!("!room{n}:example.org")).color_index)
+        .map(|n| AvatarView::of(&format!("Room {n}"), "!id:example.org").color_index)
         .collect();
     let distinct: std::collections::HashSet<usize> = indexes.iter().copied().collect();
     assert!(indexes.iter().all(|i| *i < AVATAR_COLOR_COUNT));
