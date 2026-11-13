@@ -192,3 +192,50 @@ fn the_store_is_usable_as_the_shared_port() {
         Some(alice_session("tok"))
     );
 }
+
+#[test]
+fn a_session_that_the_line_format_cannot_hold_is_refused_and_the_store_stays_readable() {
+    // Space, line breaks, tabs, controls, other Unicode whitespace and an empty token would split
+    // or drop a field on reading back: the whole entry would be unreadable (A005).
+    for token in [
+        "has space",
+        "line\nbreak",
+        "carriage\rreturn",
+        "tab\there",
+        "nul\u{0}byte",
+        "next\u{85}line",
+        "em\u{2003}space",
+        "",
+    ] {
+        let keychain = Arc::new(MemoryKeychain::default());
+        let store = store(&keychain);
+        let kept = alice_session("kept-token");
+        block_on(store.save(kept.clone())).unwrap();
+        let mut bob = alice_session(token);
+        bob.user_id = UserId::parse("@bob:example.org").unwrap();
+
+        assert_eq!(
+            block_on(store.save(bob.clone())),
+            Err(SessionStoreError::Unavailable),
+            "token {token:?} is refused"
+        );
+
+        assert_eq!(
+            block_on(store.list()),
+            Ok(vec![kept.clone()]),
+            "after refusing {token:?} the saved sessions are intact"
+        );
+        assert_eq!(block_on(store.load(bob.user_id)), Ok(None));
+    }
+}
+
+#[test]
+fn replacing_a_session_by_one_that_cannot_be_held_keeps_the_old_one() {
+    let keychain = Arc::new(MemoryKeychain::default());
+    let store = store(&keychain);
+    block_on(store.save(alice_session("good"))).unwrap();
+
+    assert!(block_on(store.save(alice_session("bad token"))).is_err());
+
+    assert_eq!(block_on(store.list()), Ok(vec![alice_session("good")]));
+}
