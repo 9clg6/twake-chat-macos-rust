@@ -5,6 +5,8 @@ use twake_ui_kit::Rgba8;
 use twake_ui_kit::color::mix;
 use twake_ui_kit::theme::Theme;
 
+use twake_ui_kit::theme::ColorScheme;
+
 use crate::timeline_rows::Side;
 
 // ponytail: `MessageBubble.tsx` sets these as literals; twake-tokens has no token for them.
@@ -17,6 +19,15 @@ const LINE_HEIGHT_PX: f32 = 20.0;
 const OWN_TINT: f32 = 0.12;
 const MAX_SHARE: f32 = 0.75;
 const MAX_WIDTH_PX: f32 = 520.0;
+
+/// What lies behind the messages: the fallback colour of `wallpaper.ts` of the React app (its
+/// image is not drawn here), so that the paper of the bubbles of others stands out on it.
+pub fn wallpaper(theme: &Theme) -> Rgba8 {
+    match theme.scheme {
+        ColorScheme::Light => Rgba8::new(222, 228, 252, 255),
+        ColorScheme::Dark => Rgba8::new(44, 52, 72, 255),
+    }
+}
 
 /// How a bubble is drawn.
 #[derive(Debug, Clone, Copy, PartialEq)]
