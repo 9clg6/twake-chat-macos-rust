@@ -5,6 +5,9 @@ use std::path::Path;
 use futures::{Stream, StreamExt};
 use matrix_sdk::{Client, SessionChange};
 use tokio::sync::broadcast::error::RecvError;
+use twake_domain::UserId;
+
+use crate::account_data_dir;
 
 /// Why a sign-out did not finish.
 #[derive(Debug, thiserror::Error)]
@@ -23,16 +26,26 @@ pub enum Expiry {
     Hard,
 }
 
-/// Signs out and erases `dir`, the folder of the account. The server is asked once; if it
-/// cannot answer, the local data goes anyway.
-pub async fn sign_out(client: Client, dir: &Path) -> Result<(), SignOutError> {
+/// Signs out and erases `account_data_dir(root, user)` and nothing else. The server is asked
+/// once; if it cannot answer, the local data goes anyway. A symbolic link there is removed, not
+/// followed.
+pub async fn sign_out(client: Client, root: &Path, user: &UserId) -> Result<(), SignOutError> {
+    let dir = account_data_dir(root, user);
     let _ = client.matrix_auth().logout().await; // ponytail: offline or 401 still wipes
     drop(client); // closes the SQLite files
-    match std::fs::remove_dir_all(dir) {
+    match wipe(&dir) {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
         Err(_) => Err(SignOutError::Wipe),
     }
+}
+
+fn wipe(dir: &Path) -> std::io::Result<()> {
+    if std::fs::symlink_metadata(dir)?.is_symlink() {
+        // ponytail: a Windows directory link needs remove_dir; add when Windows signs out
+        return std::fs::remove_file(dir);
+    }
+    std::fs::remove_dir_all(dir)
 }
 
 /// Each time the server refuses the token of `client`.
