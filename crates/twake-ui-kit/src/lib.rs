@@ -3,10 +3,16 @@
 
 pub mod avatar;
 pub mod button;
+pub mod chip;
 pub mod color;
+pub mod dialog;
 pub mod icon;
+pub mod icon_button;
+pub mod menu;
+pub mod presence;
 pub mod text_buffer;
 pub mod theme;
+pub mod tooltip;
 pub mod view;
 
 /// The token types the pure half of `twake-ui` names (it has no dependency on `twake-tokens`, A010).
