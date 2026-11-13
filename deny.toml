@@ -5,7 +5,7 @@ all-features = true
 version = 2
 yanked = "deny"
 # Only informational "unmaintained" advisories are ignored, one by id, all via gpui 0.2.2.
-# A vulnerability is never ignored. Review every entry at each gpui bump (A018).
+# A vulnerability is ignored only with a written exposure analysis (RUSTSEC-2026-0459, A025). Review every entry at each gpui bump (A018).
 ignore = [
   { id = "RUSTSEC-2024-0384", reason = "unmaintained, transitive only: instant 0.1.13 <- fastrand 1.9 <- futures-lite 1.13 <- gpui_util / gpui_http_client <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
   { id = "RUSTSEC-2024-0436", reason = "unmaintained, transitive only: paste 1.0.15 <- metal 0.29 <- core-video / gpui <- gpui 0.2.2 (macOS rendering); reviewed 2026-11-12 (A018)" },
@@ -18,6 +18,7 @@ ignore = [
   { id = "RUSTSEC-2026-0371", reason = "unmaintained, transitive only: zbus_names 4.3 <- zbus 5.19 <- ashpd, oo7 <- gpui 0.2.2 (Linux portals); reviewed 2026-11-12 (A018)" },
   { id = "RUSTSEC-2026-0372", reason = "unmaintained, transitive only: zvariant_derive 5.15 <- zvariant <- zbus <- ashpd, oo7 <- gpui 0.2.2 (Linux portals); reviewed 2026-11-12 (A018)" },
   { id = "RUSTSEC-2026-0319", reason = "unmaintained, transitive only: anymap2 0.13.0 <- matrix-sdk 0.19.1 (pinned, A003); reviewed 2026-11-12 (spike S2)" },
+  { id = "RUSTSEC-2026-0459", reason = "accepted, A025: libsqlite3-sys 0.38.2 <- rusqlite 0.40.2 <- matrix-sdk-sqlite 0.19.1 (pinned). Needs a crafted database + -wal pair written into the app's own data folder; revisit when matrix-sdk moves to rusqlite 0.41 or when Windows needs the bundled build" },
   { id = "RUSTSEC-2026-0441", reason = "unmaintained, transitive only: pin-utils 0.1.1 <- async-std <- zed-async-tar <- gpui_http_client <- gpui 0.2.2; reviewed 2026-11-12 (A018)" },
 ]
 
@@ -40,10 +41,15 @@ allow = [
 confidence-threshold = 0.9
 # libfuzzer-sys is "(MIT OR Apache-2.0) AND NCSA" (permissive, MIT-like); only it needs NCSA.
 # libfuzzer-sys <- rav1e <- ravif <- image <- gpui 0.2.2. Reviewed 2026-11-12 (A018).
-exceptions = [{ allow = ["NCSA"], crate = "libfuzzer-sys" }]
+# webpki-root-certs ships the Mozilla CA list under CDLA-Permissive-2.0 (permissive data licence:
+# use, modify, share; keep the licence text). webpki-root-certs <- rustls-platform-verifier <- reqwest <- matrix-sdk 0.19.1 (A025).
+exceptions = [
+  { allow = ["NCSA"], crate = "libfuzzer-sys" },
+  { allow = ["CDLA-Permissive-2.0"], crate = "webpki-root-certs" },
+]
 
 [licenses.private]
-# Workspace crates are `publish = false` and carry no licence field: none is chosen yet.
+# Workspace crates are `publish = false`; the repository licence is MIT (LICENSE, A025).
 ignore = true
 
 [bans]
