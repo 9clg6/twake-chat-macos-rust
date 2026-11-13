@@ -1,5 +1,5 @@
 //! The CSS `box-shadow` text of the tokens (`SHADOWS_*`) as layers a renderer can draw.
-//! Only the form makeShadows.js writes: `<x>px <y>px <blur>px <spread>px rgba(r, g, b, a)`, layers
+//! Only the form makeShadows.js writes: `<x>px <y>px <blur>px [<spread>px] rgba(r, g, b, a)`, layers
 //! separated by commas, or `none`; a layer in any other form is skipped.
 
 use twake_tokens::Rgba8;
@@ -45,18 +45,16 @@ fn split_layers(css: &str) -> Vec<&str> {
 
 fn layer(text: &str) -> Option<ShadowLayer> {
     let (lengths, color) = text.trim().split_once("rgba(")?;
-    let mut numbers = lengths
+    let lengths: Vec<f32> = lengths
         .split_whitespace()
-        .map(|n| n.strip_suffix("px")?.parse::<f32>().ok());
-    let (x_px, y_px, blur_px, spread_px) = (
-        numbers.next()??,
-        numbers.next()??,
-        numbers.next()??,
-        numbers.next()??,
-    );
-    if numbers.next().is_some() {
-        return None;
-    }
+        .map(|n| n.strip_suffix("px")?.parse().ok())
+        .collect::<Option<_>>()?;
+    // The spread is optional and 0 when absent.
+    let (x_px, y_px, blur_px, spread_px) = match lengths[..] {
+        [x, y, blur] => (x, y, blur, 0.0),
+        [x, y, blur, spread] => (x, y, blur, spread),
+        _ => return None,
+    };
     let channels: Vec<f32> = color
         .strip_suffix(')')?
         .split(',')
