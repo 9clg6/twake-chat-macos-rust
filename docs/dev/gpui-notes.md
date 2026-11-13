@@ -18,7 +18,7 @@ Seen while building `twake-ui-kit::view` and `twake-desktop --gallery` (2026-11-
   They are applied by GPUI, no state in our code. A disabled button simply does not set them.
 - **Focus has no `focus-visible`.** `.focus(|s| ..)` applies on any focus, mouse included; it needs a `FocusHandle`
   (`cx.focus_handle()` in a view) given by `.track_focus(&handle)`. `Button::focus_handle` draws the 2 px ring as a
-  `BoxShadow` spread (a border would collide with the outlined one). The keyboard-only rule of design-system.md 1.7
+  `BoxShadow` (a border would collide with the outlined one). GPUI 1.28 has inset shadows (`BoxShadow { inset: true }`), so "no inset shadow" no longer holds. The keyboard-only rule of design-system.md 1.7
   is therefore not met yet.
 - **No letter spacing** in `TextStyle` of 0.2.2: `font.letter_spacing` of `ResolvedButton` is not applied.
 - `cx.window_appearance()` gives the OS theme (`Dark | VibrantDark` is dark); used for `Theme::system`.
