@@ -4,7 +4,6 @@
 //! Expected public surface, `twake_matrix::map`:
 //! - `room_kind(is_space: bool, is_direct: bool) -> RoomKind` (Space, else Direct, else Group)
 //! - `is_muted(RoomNotificationMode) -> bool`
-//! - `unread_count(messages: u64, mentions: u64, marked_unread: bool) -> UnreadCount`
 //! - `last_sender(me: &UserId, sender: &UserId, display_name: Option<&str>) -> LastSender`
 //! - `timestamp(MilliSecondsSinceUnixEpoch) -> Timestamp`
 //! - `send_state(&EventSendState) -> SendState`
@@ -25,7 +24,6 @@ use matrix_sdk::ruma::events::room::message::{
 use matrix_sdk::ruma::{MilliSecondsSinceUnixEpoch, UInt, event_id, mxc_uri};
 use matrix_sdk_ui::timeline::EventSendState;
 use twake_app::ports::{RoomListError, TimelineError};
-use twake_domain::read_state::UnreadCount;
 use twake_domain::room_list::{LastSender, RoomKind};
 use twake_domain::timeline::SendState;
 use twake_domain::{Timestamp, UserId};
