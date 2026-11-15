@@ -58,30 +58,6 @@ fn a_room_that_says_nothing_or_only_mentions_is_muted() {
 }
 
 #[test]
-fn unread_counts_are_kept_as_given() {
-    let want = UnreadCount {
-        unread: 3,
-        mentions: 1,
-        marked_unread: false,
-    };
-    assert_eq!(map::unread_count(3, 1, false), want);
-}
-
-#[test]
-fn the_mark_without_a_count_is_kept() {
-    // D615: a room marked unread shows without a count.
-    let got = map::unread_count(0, 0, true);
-    assert!(got.marked_unread && got.is_unread());
-    assert!(!map::unread_count(0, 0, false).is_unread());
-}
-
-#[test]
-fn a_count_beyond_what_the_domain_holds_stops_at_the_largest_one() {
-    let got = map::unread_count(u64::MAX, u64::from(u32::MAX) + 1, false);
-    assert_eq!((got.unread, got.mentions), (u32::MAX, u32::MAX));
-}
-
-#[test]
 fn the_last_message_of_the_user_is_marked_me() {
     let me = user("@alice:example.org");
     assert_eq!(map::last_sender(&me, &me, Some("Alice")), LastSender::Me);

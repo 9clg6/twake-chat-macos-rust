@@ -280,6 +280,28 @@ async fn a_row_carries_no_count_of_the_server() {
     );
 }
 
+/// D615: a room the user marked unread by hand shows as unread with no count.
+#[tokio::test]
+async fn a_room_marked_unread_by_hand_shows_the_mark_without_a_count() {
+    let rooms = vec![
+        RoomSeed::new("!marked:example.org").named("Marked"),
+        RoomSeed::new("!plain:example.org").named("Plain"),
+    ];
+    let data = AccountData::default().marking_unread("!marked:example.org");
+    let list = first_list(&serve(rooms, data).await).await;
+    let marked = find(&list, "!marked:example.org").unread;
+    assert_eq!(
+        marked,
+        UnreadCount {
+            unread: 0,
+            mentions: 0,
+            marked_unread: true
+        }
+    );
+    assert!(marked.is_unread());
+    assert!(!find(&list, "!plain:example.org").unread.is_unread());
+}
+
 #[tokio::test]
 async fn a_muted_room_is_marked_muted() {
     let (rooms, data) = account();

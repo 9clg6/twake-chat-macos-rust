@@ -258,10 +258,18 @@ impl AccountData {
         self
     }
 
+    /// `m.marked_unread`: the user marked the room unread by hand (D615).
+    pub fn marking_unread(mut self, room: &str) -> Self {
+        let event = json!({"type": "m.marked_unread", "content": {"unread": true}});
+        self.rooms.push((room.to_string(), vec![event]));
+        self
+    }
+
     fn json(&self) -> Value {
-        let mut rooms = serde_json::Map::new();
+        let mut rooms = serde_json::Map::<String, Value>::new();
         for (room, events) in &self.rooms {
-            rooms.insert(room.clone(), json!(events));
+            let entry = rooms.entry(room.clone()).or_insert_with(|| json!([]));
+            entry.as_array_mut().unwrap().extend(events.iter().cloned());
         }
         let mut global = self.global.clone();
         if !self.directs.is_empty() {
