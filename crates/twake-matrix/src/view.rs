@@ -77,10 +77,20 @@ impl View {
         Ok(view)
     }
 
+    /// The messages of the SDK timeline, each once: the timeline lists the tail of the room twice
+    /// for a moment while it absorbs a page (seen under load), and a duplicate that reached the
+    /// screen would never be removed.
+    /// ponytail: quadratic scan of a window of some hundred messages; a set if timelines grow.
     async fn snapshot(&self) -> Vec<Message> {
         let items = self.timeline.items().await;
         let events = items.iter().filter_map(|i| i.as_event());
-        events.filter_map(to_message).collect()
+        let mut messages: Vec<Message> = Vec::new();
+        for message in events.filter_map(to_message) {
+            if !messages.iter().any(|m| m.is_same_as(&message)) {
+                messages.push(message);
+            }
+        }
+        messages
     }
 
     /// `paginate_backwards` returns before the timeline has absorbed the page (it reads the event
