@@ -29,12 +29,11 @@ async fn first_sync(server: &MatrixMockServer) -> matrix_sdk::Client {
 }
 
 #[tokio::test]
-async fn the_seeded_rooms_reach_the_client_with_their_counts_and_tags() {
+async fn the_seeded_rooms_reach_the_client_with_their_names_and_tags() {
     let server = MatrixMockServer::new().await;
     let rooms = vec![
         RoomSeed::new("!group:example.org")
             .named("Group")
-            .unread(3, 1)
             .with_message(text_event("$m1", "@bob:example.org", 5_000, "hello")),
         RoomSeed::new("!dm:example.org")
             .named("Bob")
@@ -55,8 +54,6 @@ async fn the_seeded_rooms_reach_the_client_with_their_counts_and_tags() {
         group.cached_display_name().map(|n| n.to_string()),
         Some("Group".into())
     );
-    let counts = group.unread_notification_counts();
-    assert_eq!((counts.notification_count, counts.highlight_count), (3, 1));
     let dm = client.get_room(room_id!("!dm:example.org")).unwrap();
     assert!(dm.is_direct().await.unwrap());
     let fav = client.get_room(room_id!("!fav:example.org")).unwrap();

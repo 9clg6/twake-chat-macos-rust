@@ -95,10 +95,9 @@ fn find<'a>(rooms: &'a [RoomSummary], id: &str) -> &'a RoomSummary {
 fn account() -> (Vec<RoomSeed>, AccountData) {
     let bob = "@bob:example.org";
     let rooms = vec![
-        // A group: 3 unread, one of them names the user; the newest message is Bob's.
+        // A group; the newest message is Bob's.
         RoomSeed::new("!group:example.org")
             .named("Team")
-            .unread(3, 1)
             .bumped(77)
             .with_member(bob, "Bob Martin")
             .with_message(text_event("$g1", bob, 5_000, "see you at 5")),
@@ -109,10 +108,9 @@ fn account() -> (Vec<RoomSeed>, AccountData) {
             .avatar("mxc://example.org/bob")
             .bumped(5)
             .with_message(text_event("$d1", "@alice:example.org", 8_000, "on my way")),
-        // A muted group with unread messages.
+        // A muted group.
         RoomSeed::new("!quiet:example.org")
             .named("Quiet")
-            .unread(4, 0)
             .bumped(9)
             .with_member(bob, "Bob Martin")
             .with_message(text_event("$q1", bob, 3_000, "shh")),
@@ -178,10 +176,6 @@ fn seed_of(summary: &RoomSummary) -> RoomSeed {
     if summary.kind == RoomKind::Space {
         seed = seed.space();
     }
-    seed = seed.unread(
-        u64::from(summary.unread.unread),
-        u64::from(summary.unread.mentions),
-    );
     let (sender, name) = match &summary.last_sender {
         Some(LastSender::Other(name)) => ("@contractsender:example.org", Some(name.as_str())),
         _ => ("@alice:example.org", None),
@@ -264,21 +258,20 @@ async fn a_room_without_a_message_is_dated_by_its_creation() {
     assert_eq!(room.last_sender, None);
 }
 
+/// A031 / D60 / AGENTS.md "Unread": Synapse sends no counters with sliding sync, the client
+/// computes them (domain `read_state`, timeline and receipts). The room list gives no count of
+/// its own: a row starts at zero whatever counters a server happens to send.
 #[tokio::test]
-async fn unread_counts_and_mentions_come_from_the_server_counts() {
-    let (rooms, data) = account();
-    let list = first_list(&serve(rooms, data).await).await;
-    let unread = |id: &str| find(&list, id).unread;
+async fn a_row_carries_no_count_of_the_server() {
+    let rooms = vec![
+        RoomSeed::new("!group:example.org")
+            .named("Team")
+            .unread(3, 1)
+            .with_message(text_event("$g1", "@bob:example.org", 5_000, "see you at 5")),
+    ];
+    let list = first_list(&serve(rooms, AccountData::default()).await).await;
     assert_eq!(
-        unread("!group:example.org"),
-        UnreadCount {
-            unread: 3,
-            mentions: 1,
-            marked_unread: false
-        }
-    );
-    assert_eq!(
-        unread("!dm:example.org"),
+        find(&list, "!group:example.org").unread,
         UnreadCount {
             unread: 0,
             mentions: 0,
@@ -288,12 +281,10 @@ async fn unread_counts_and_mentions_come_from_the_server_counts() {
 }
 
 #[tokio::test]
-async fn a_muted_room_is_marked_muted_and_keeps_its_count() {
+async fn a_muted_room_is_marked_muted() {
     let (rooms, data) = account();
     let list = first_list(&serve(rooms, data).await).await;
-    let quiet = find(&list, "!quiet:example.org");
-    assert!(quiet.is_muted);
-    assert_eq!(quiet.unread.unread, 4);
+    assert!(find(&list, "!quiet:example.org").is_muted);
     assert!(!find(&list, "!group:example.org").is_muted);
 }
 
@@ -339,7 +330,6 @@ async fn a_new_message_updates_the_row_of_its_room() {
     served.script.push(vec![
         RoomSeed::new("!group:example.org")
             .named("Team")
-            .unread(4, 1)
             .bumped(99)
             .with_member(bob, "Bob Martin")
             .with_message(text_event("$g2", bob, 9_000, "running late")),
@@ -353,7 +343,6 @@ async fn a_new_message_updates_the_row_of_its_room() {
         let team = find(&list, "!group:example.org");
         if team.last_message_preview.as_deref() == Some("running late") {
             assert_eq!(team.last_activity, Timestamp::from_millis(9_000));
-            assert_eq!(team.unread.unread, 4);
             break;
         }
         assert!(

@@ -395,8 +395,8 @@ async fn a_confirmed_send_is_the_same_bubble_with_the_event_id_of_the_server() {
 #[tokio::test]
 async fn a_send_the_server_refuses_ends_as_a_failed_echo() {
     // wiremock answers with the first mock that matches: the refusal is the only /send mock.
-    let refusal = ResponseTemplate::new(403)
-        .set_body_json(json!({"errcode": "M_FORBIDDEN", "error": "no"}));
+    let refusal =
+        ResponseTemplate::new(403).set_body_json(json!({"errcode": "M_FORBIDDEN", "error": "no"}));
     let served = serve_with(&alice(), texts(2), refusal).await;
     let (mut stream, _) = open(&served).await;
     served.send_text(room(), "nope".into()).await.unwrap();
