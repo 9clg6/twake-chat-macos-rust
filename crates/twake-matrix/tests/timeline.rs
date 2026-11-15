@@ -402,10 +402,15 @@ async fn a_send_the_server_refuses_ends_as_a_failed_echo() {
     served.send_text(room(), "nope".into()).await.unwrap();
     let echo = the_echo(&mut stream).await;
 
-    let failed = loop {
-        let batch = next_batch(&mut stream).await;
-        if let Some(TimelineDiff::Update(m)) = batch.into_iter().next() {
-            break m;
+    // The server answers at once: the echo may already come as failed, or fail right after.
+    let failed = if echo.send_state == SendState::Failed {
+        echo.clone()
+    } else {
+        loop {
+            let batch = next_batch(&mut stream).await;
+            if let Some(TimelineDiff::Update(m)) = batch.into_iter().next() {
+                break m;
+            }
         }
     };
     assert_eq!(failed.send_state, SendState::Failed);
