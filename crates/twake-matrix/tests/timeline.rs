@@ -18,9 +18,10 @@
 mod common;
 
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use common::history::{History, mount_send};
+use common::history::{History, mount_send, mount_send_with, send_answer};
 use common::seed::{
     AccountData, RoomSeed, SlidingScript, TOKEN, edit_event, redaction_event, reply_event,
     signed_in, text_event,
@@ -57,7 +58,9 @@ fn event(id: &str) -> EventId {
 struct Served {
     port: MatrixTimeline,
     script: SlidingScript,
-    server: MatrixMockServer,
+    /// While true, `/messages` answers 500.
+    broken: Arc<AtomicBool>,
+    _server: MatrixMockServer,
     _dir: TempDir,
 }
 
@@ -80,18 +83,23 @@ impl TimelinePort for Served {
 
 /// `me` is in the room `ROOM` whose history is `events`; `/send` answers after `send_delay`.
 async fn serve(me: &UserId, events: Vec<Value>, send_delay: Duration) -> Served {
+    serve_with(me, events, send_answer(send_delay)).await
+}
+
+async fn serve_with(me: &UserId, events: Vec<Value>, send: ResponseTemplate) -> Served {
     let server = MatrixMockServer::new().await;
     let history = History::new(ROOM, events);
     let script = SlidingScript::new(vec![history.seed()], AccountData::default());
     script.mount(&server).await;
     history.mount(&server).await;
-    mount_send(&server, send_delay).await;
+    mount_send_with(&server, send).await;
     let dir = tempfile::tempdir().unwrap();
     let client = signed_in(&server, dir.path(), me).await;
     Served {
         port: MatrixTimeline::new(client),
         script,
-        server,
+        broken: history.broken,
+        _server: server,
         _dir: dir,
     }
 }
@@ -184,7 +192,8 @@ async fn serve_room(me: &UserId, room: &str, events: Vec<Value>) -> Served {
     Served {
         port: MatrixTimeline::new(client),
         script,
-        server,
+        broken: history.broken,
+        _server: server,
         _dir: dir,
     }
 }
@@ -385,16 +394,10 @@ async fn a_confirmed_send_is_the_same_bubble_with_the_event_id_of_the_server() {
 
 #[tokio::test]
 async fn a_send_the_server_refuses_ends_as_a_failed_echo() {
-    let served = serve(&alice(), texts(2), Duration::from_secs(120)).await;
-    served
-        .server
-        .mock_room_send()
-        .respond_with(
-            ResponseTemplate::new(403)
-                .set_body_json(json!({"errcode": "M_FORBIDDEN", "error": "no"})),
-        )
-        .mount()
-        .await;
+    // wiremock answers with the first mock that matches: the refusal is the only /send mock.
+    let refusal = ResponseTemplate::new(403)
+        .set_body_json(json!({"errcode": "M_FORBIDDEN", "error": "no"}));
+    let served = serve_with(&alice(), texts(2), refusal).await;
     let (mut stream, _) = open(&served).await;
     served.send_text(room(), "nope".into()).await.unwrap();
     let echo = the_echo(&mut stream).await;
@@ -411,21 +414,17 @@ async fn a_send_the_server_refuses_ends_as_a_failed_echo() {
 
 // ------------------------------------------------------------ errors
 
+// The SDK fills its event cache in the background (A031), so a page asked after `open` may
+// never reach the server; the server that cannot give the first page is the sure way to test it.
 #[tokio::test]
 async fn a_page_the_server_cannot_give_is_unavailable_without_leaking_the_token() {
     let served = serve(&alice(), texts(40), Duration::from_secs(120)).await;
-    let (_stream, first) = open(&served).await;
-    assert_eq!(first.len(), 30);
-    served
-        .server
-        .mock_room_messages()
-        .respond_with(ResponseTemplate::new(500))
-        .mount()
-        .await;
-    let error = tokio::time::timeout(WAIT, served.paginate_back(room()))
+    served.broken.store(true, Ordering::SeqCst);
+    let error = tokio::time::timeout(WAIT, served.open(room()))
         .await
-        .expect("a failing server must not hang the page")
-        .expect_err("the page fails");
+        .expect("a failing server must not hang the opening")
+        .err()
+        .expect("the opening fails");
     assert_eq!(error, TimelineError::Unavailable);
     assert!(!format!("{error} {error:?}").contains(TOKEN));
 }

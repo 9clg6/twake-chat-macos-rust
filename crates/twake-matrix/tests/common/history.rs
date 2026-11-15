@@ -10,6 +10,8 @@
 
 use matrix_sdk::test_utils::mocks::MatrixMockServer;
 use serde_json::{Value, json};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 use wiremock::{Request, ResponseTemplate};
 
@@ -23,6 +25,8 @@ pub const IN_SYNC: usize = 5;
 pub struct History {
     pub room: String,
     pub events: Vec<Value>,
+    /// While true, `/messages` answers 500.
+    pub broken: Arc<AtomicBool>,
 }
 
 impl History {
@@ -30,6 +34,7 @@ impl History {
         Self {
             room: room.to_string(),
             events,
+            broken: Arc::default(),
         }
     }
 
@@ -43,6 +48,9 @@ impl History {
     }
 
     fn page(&self, request: &Request) -> ResponseTemplate {
+        if self.broken.load(Ordering::SeqCst) {
+            return ResponseTemplate::new(500);
+        }
         let query = |key: &str| {
             request
                 .url
@@ -77,13 +85,15 @@ impl History {
 
 /// `/send` answers `$sent` after `delay`: a long delay keeps the local echo the only news.
 pub async fn mount_send(server: &MatrixMockServer, delay: Duration) {
-    server
-        .mock_room_send()
-        .respond_with(
-            ResponseTemplate::new(200)
-                .set_body_json(json!({"event_id": "$sent"}))
-                .set_delay(delay),
-        )
-        .mount()
-        .await;
+    mount_send_with(server, send_answer(delay)).await;
+}
+
+pub fn send_answer(delay: Duration) -> ResponseTemplate {
+    ResponseTemplate::new(200)
+        .set_body_json(json!({"event_id": "$sent"}))
+        .set_delay(delay)
+}
+
+pub async fn mount_send_with(server: &MatrixMockServer, answer: ResponseTemplate) {
+    server.mock_room_send().respond_with(answer).mount().await;
 }
