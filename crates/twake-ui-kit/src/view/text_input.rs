@@ -108,8 +108,8 @@ impl TextInput {
     }
 
     /// Gives the field the keyboard focus.
-    pub fn focus(&self, window: &mut Window) {
-        window.focus(&self.focus);
+    pub fn focus(&self, window: &mut Window, cx: &mut App) {
+        window.focus(&self.focus, cx);
     }
 
     /// Height of the field with its padding and border, in pixels: grows with the rows, up to
@@ -410,6 +410,7 @@ impl Render for TextInput {
                 offset: point(px(0.0), px(0.0)),
                 blur_radius: px(0.0),
                 spread_radius: px(ring.width_px),
+                inset: false,
             }]);
         }
         field

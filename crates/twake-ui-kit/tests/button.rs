@@ -11,7 +11,7 @@ use twake_ui_kit::button::{
 };
 use twake_ui_kit::theme::{ColorScheme, Theme};
 
-use ButtonColor::{Error, Primary, Secondary};
+use ButtonColor::{Error, Info, Primary, Secondary, Success, Warning};
 use ButtonSize::{Large, Medium, Small, XSmall};
 use ButtonState::{Disabled, FocusVisible, Hover, Pressed, Rest};
 use ButtonVariant::{Contained, Outlined, Text};
@@ -47,7 +47,10 @@ fn tone(color: ButtonColor, theme: &Theme) -> Tone {
     match color {
         Primary => scheme.primary,
         Secondary => scheme.secondary,
+        Success => scheme.success,
         Error => scheme.error,
+        Warning => scheme.warning,
+        Info => scheme.info,
     }
 }
 

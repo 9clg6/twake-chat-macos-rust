@@ -184,6 +184,14 @@ pub const LIGHT: Scheme = Scheme {
     divider: Rgba8::new(66, 66, 68, 31),
 };
 
+pub const OPACITY_LIGHT: ActionOpacities = ActionOpacities {
+    hover: 0.04,
+    selected: 0.08,
+    disabled: 0.32,
+    ghost: 0.08,
+    hover_ghost: 0.16,
+};
+
 pub const SHADOWS_LIGHT: [&str; 26] = [
     "none",
     "0px 2px 4px 0px rgba(66, 66, 68, 0.08), 0px 4px 16px 0px rgba(66, 66, 68, 0.06), 0px 0px 0px 0.5px rgba(66, 66, 68, 0.12)",
@@ -276,6 +284,14 @@ pub const DARK: Scheme = Scheme {
         ghost_disabled: Rgba8::new(255, 255, 255, 61),
     },
     divider: Rgba8::new(255, 255, 255, 41),
+};
+
+pub const OPACITY_DARK: ActionOpacities = ActionOpacities {
+    hover: 0.08,
+    selected: 0.16,
+    disabled: 0.32,
+    ghost: 0.08,
+    hover_ghost: 0.16,
 };
 
 pub const SHADOWS_DARK: [&str; 26] = [

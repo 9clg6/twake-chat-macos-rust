@@ -3,7 +3,7 @@
 use serde_json::{Map, Value};
 
 use crate::common::{Res, fail, object, root as parse_root, string};
-use crate::tokens_design::{avatars, shadows, theme};
+use crate::tokens_design::{avatars, opacities, shadows, theme};
 
 pub use crate::common::Error;
 
@@ -218,6 +218,7 @@ fn scheme(mode: &str, raw: &Value) -> Res<String> {
     }
     let divider = colour_of(palette, "divider", &format!("scheme {mode}"))?;
     text.push_str(&format!("    divider: {divider},\n}};\n\n"));
+    text.push_str(&opacities(mode, palette)?);
     text.push_str(&shadows(mode, object(raw, "scheme")?)?);
     Ok(text)
 }

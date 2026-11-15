@@ -37,3 +37,19 @@ pub fn mix(top: Rgba8, bottom: Rgba8, amount: f32) -> Rgba8 {
         bottom.a,
     )
 }
+
+/// The colour with this alpha byte.
+pub const fn with_alpha(color: Rgba8, a: u8) -> Rgba8 {
+    Rgba8::new(color.r, color.g, color.b, a)
+}
+
+/// The colour at this CSS opacity (`0..=1`), alpha rounded to a byte as the token generator does.
+pub fn tint(color: Rgba8, opacity: f32) -> Rgba8 {
+    // The clamp makes the cast exact.
+    with_alpha(color, (opacity * 255.0).round().clamp(0.0, 255.0) as u8)
+}
+
+/// No colour at all: the box of a control at rest.
+pub fn transparent(color: Rgba8) -> Rgba8 {
+    with_alpha(color, 0)
+}

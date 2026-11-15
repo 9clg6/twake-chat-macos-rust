@@ -69,6 +69,16 @@ Four `build.rs`, all byte-identical to Zed except the path line in item 2:
 - Hidden/Unicode tricks: not scanned beyond `diff` (diff is byte-exact for every non-listed file, so any such trick would appear as a differing file; none did).
 - Zed's pre-existing code was not reviewed for vulnerabilities: only equality with upstream.
 
+## Addendum 2026-11-13: the `font-kit` feature of `gpui-platform` (A028)
+
+`twake-gpui` enables `font-kit` on `gpui-platform-gpui-unofficial`: without it no glyph is drawn on macOS. The audit above was made on the two dependencies without that feature.
+
+- Method: `cargo tree -p twake-gpui --target aarch64-apple-darwin --prefix none -e normal`, sorted, with and without the feature (feature removed from `crates/twake-gpui/Cargo.toml`, tree diffed, manifest and `Cargo.lock` restored).
+- Added by `font-kit` (12 crates, all from crates.io, none from the republisher): `zed-font-kit 0.14.1-zed`, `core-text 21.0.0`, `objc2-core-text 0.3.2`, `pathfinder_geometry 0.5.1`, `pathfinder_simd 0.5.6`, `float-ord 0.3.2`, `lazy_static 1.5.1`, `dirs 5.0.1`, `dirs-sys 0.4.1`, `option-ext 0.2.0`, `same-file 1.0.6`, `walkdir 2.5.0`.
+- Republisher crates (`*-gpui-unofficial`, `gpui-archipelago`, `iamnbutler`) in the macOS tree with the feature: the same 15 as in the audit. None is added, so no extra diff against Zed v1.28.1 was needed: the feature-gated code of those 15 crates was part of the whole-crate diff above.
+- `zed-font-kit` is Zed's own publication of `font-kit` (repository `servo/font-kit`; owners listed in the audit above), not the republisher's.
+- Verdict: no crate of the republisher outside the audited set. Not audited: the 12 crates above (upstream, widely used; `dirs`, `walkdir`, `same-file`, `lazy_static` are common; `zed-font-kit`, `pathfinder_*` and `core-text` are the font stack of Zed and Servo).
+
 ## Reproduce
 
 ```

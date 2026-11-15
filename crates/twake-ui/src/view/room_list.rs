@@ -4,7 +4,7 @@ use twake_app::room_list::RoomListState;
 use twake_domain::{RoomId, Timestamp};
 use twake_gpui::{
     AnyElement, Context, EventEmitter, FontWeight, InteractiveElement, IntoElement, ParentElement,
-    Render, ScrollWheelEvent, StatefulInteractiveElement, Styled, Window, div, px,
+    Render, ScrollEvent, StatefulInteractiveElement, Styled, Window, div, px,
 };
 use twake_i18n::Locale;
 use twake_ui_kit::theme::Theme;
@@ -195,14 +195,14 @@ impl Render for RoomListView {
                     .relative()
                     .flex_1()
                     .overflow_hidden()
-                    .on_scroll_wheel(cx.listener(
-                        |this: &mut Self, event: &ScrollWheelEvent, window, cx| {
+                    .on_scroll(
+                        cx.listener(|this: &mut Self, event: &ScrollEvent, window, cx| {
                             let total = this.index.total_height();
                             this.scroll_top =
                                 scrolled(this.scroll_top, event, total, viewport(window));
                             cx.notify();
-                        },
-                    ))
+                        }),
+                    )
                     .child(
                         div()
                             .absolute()

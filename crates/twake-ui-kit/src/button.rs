@@ -4,6 +4,7 @@
 
 use twake_tokens::{LineHeight, Rgba8, TYPE_BUTTON, Tone, TypeSpec};
 
+use crate::color::{tint, transparent, with_alpha};
 use crate::theme::Theme;
 
 /// How the button is filled.
@@ -15,6 +16,8 @@ pub enum ButtonVariant {
     Outlined,
     /// Transparent, no border.
     Text,
+    /// Tinted fill of the tone, no border (twake-mui `ghost`).
+    Ghost,
 }
 
 /// Which tone colours the button.
@@ -26,6 +29,12 @@ pub enum ButtonColor {
     Secondary,
     /// The error tone.
     Error,
+    /// The success tone.
+    Success,
+    /// The warning tone.
+    Warning,
+    /// The info tone.
+    Info,
 }
 
 /// MUI sizes.
@@ -99,6 +108,8 @@ pub struct ResolvedButton {
     pub opacity: f32,
 }
 
+/// Fill of a primary ghost button at rest and hovered, `overrides.js:187-198`.
+const PRIMARY_GHOST: (f32, f32) = (0.25, 0.32);
 const FOCUS_RING_PX: f32 = 2.0;
 const RADIUS_PX: f32 = 100.0;
 const XSMALL_FONT: TypeSpec = TypeSpec {
@@ -114,11 +125,10 @@ fn tone_of(color: ButtonColor, theme: &Theme) -> Tone {
         ButtonColor::Primary => scheme.primary,
         ButtonColor::Secondary => scheme.secondary,
         ButtonColor::Error => scheme.error,
+        ButtonColor::Success => scheme.success,
+        ButtonColor::Warning => scheme.warning,
+        ButtonColor::Info => scheme.info,
     }
-}
-
-fn with_alpha(color: Rgba8, a: u8) -> Rgba8 {
-    Rgba8::new(color.r, color.g, color.b, a)
 }
 
 /// Per-size values, in the order XSmall, Small, Medium, Large.
@@ -139,6 +149,7 @@ const fn padding(variant: ButtonVariant, size: ButtonSize) -> (f32, f32) {
         ButtonVariant::Outlined => {
             by_size(size, [(7.0, 3.0), (16.0, 9.0), (15.0, 5.0), (32.0, 13.0)])
         }
+        ButtonVariant::Ghost => by_size(size, [(8.0, 4.0), (16.0, 9.0), (15.0, 5.0), (32.0, 13.0)]),
         ButtonVariant::Text => by_size(size, [(8.0, 4.0), (16.0, 8.0), (8.0, 10.0), (10.0, 14.0)]),
     }
 }
@@ -156,19 +167,62 @@ fn colors(
         let background = if filled {
             theme.colors().action.disabled_background
         } else {
-            with_alpha(tone.main, 0)
+            transparent(tone.main)
         };
         return (background, theme.colors().action.disabled);
     }
     match (filled, hovered) {
         (true, false) => (tone.main, tone.contrast_text),
         (true, true) => (tone.dark, tone.contrast_text),
-        (false, false) => (with_alpha(tone.main, 0), tone.main),
+        (false, false) => (transparent(tone.main), tone.main),
         (false, true) => (
             with_alpha(tone.main, theme.colors().action.hover.a),
             tone.main,
         ),
     }
+}
+
+/// Colours of a ghost button: primary is written in `text.primary` on a stronger tint, the other
+/// tones in their main on `ghostOpacity`; disabled is a bare outline (`overrides.js:187-214`).
+fn ghost_colors(
+    color: ButtonColor,
+    tone: Tone,
+    hovered: bool,
+    disabled: bool,
+    theme: &Theme,
+) -> (Rgba8, Rgba8) {
+    let scheme = theme.colors();
+    if disabled {
+        return (transparent(tone.main), scheme.action.disabled);
+    }
+    let (rest, hover) = if color == ButtonColor::Primary {
+        PRIMARY_GHOST
+    } else {
+        (theme.opacities().ghost, theme.opacities().hover_ghost)
+    };
+    let ink = if color == ButtonColor::Primary {
+        scheme.text.primary
+    } else {
+        tone.main
+    };
+    (tint(tone.main, if hovered { hover } else { rest }), ink)
+}
+
+fn border(
+    variant: ButtonVariant,
+    foreground: Rgba8,
+    disabled: bool,
+    theme: &Theme,
+) -> Option<Border> {
+    let color = match variant {
+        ButtonVariant::Outlined => foreground,
+        ButtonVariant::Ghost if disabled => theme.colors().action.disabled_background,
+        _ => return None,
+    };
+    Some(Border {
+        width_px: 1.0,
+        color,
+    })
 }
 
 /// Resolves a button style.
@@ -186,15 +240,16 @@ impl ButtonStyle {
         let tone = tone_of(color, theme);
         let hovered = matches!(state, ButtonState::Hover | ButtonState::Pressed);
         let disabled = state == ButtonState::Disabled;
-        let (background, foreground) = colors(variant, tone, hovered, disabled, theme);
+        let (background, foreground) = if variant == ButtonVariant::Ghost {
+            ghost_colors(color, tone, hovered, disabled, theme)
+        } else {
+            colors(variant, tone, hovered, disabled, theme)
+        };
         let (padding_x, padding_y) = padding(variant, size);
         ResolvedButton {
             background,
             foreground,
-            border: (variant == ButtonVariant::Outlined).then_some(Border {
-                width_px: 1.0,
-                color: foreground,
-            }),
+            border: border(variant, foreground, disabled, theme),
             focus_ring: (state == ButtonState::FocusVisible).then_some(FocusRing {
                 width_px: FOCUS_RING_PX,
                 color: theme.colors().primary.main,

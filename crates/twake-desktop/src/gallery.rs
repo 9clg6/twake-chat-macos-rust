@@ -1,6 +1,11 @@
-//! `--gallery`: every button variant, colour and state, a few icons, and a light/dark switch.
+//! `--gallery`: every button variant, colour and state, a few icons, the components of `gallery_parts`,
+//! and a light/dark switch.
 
-use twake_gpui::{Context, IntoElement, ParentElement, Render, Styled, Window, div, px, rgb};
+use crate::gallery_parts::components;
+use twake_gpui::{
+    Context, Div, InteractiveElement, IntoElement, ParentElement, Render,
+    StatefulInteractiveElement, Styled, Window, div, px, rgb,
+};
 use twake_icons::{ASSISTANT_COLOR, CHECK, SEND};
 use twake_tokens::Rgba8;
 use twake_ui_kit::button::{ButtonColor, ButtonVariant};
@@ -19,7 +24,7 @@ const COLORS: [(ButtonColor, &str); 3] = [
     (ButtonColor::Error, "Error"),
 ];
 
-fn packed(color: Rgba8) -> u32 {
+pub(crate) fn packed(color: Rgba8) -> u32 {
     u32::from(color.r) << 16 | u32::from(color.g) << 8 | u32::from(color.b)
 }
 
@@ -37,34 +42,39 @@ impl Gallery {
     }
 }
 
+fn button_rows(theme: Theme) -> Div {
+    let mut rows = div().flex().flex_col().gap_3();
+    for (variant, variant_name) in VARIANTS {
+        for (color, color_name) in COLORS {
+            let id = format!("{variant_name}-{color_name}");
+            rows = rows.child(
+                div()
+                    .flex()
+                    .items_center()
+                    .gap_3()
+                    .child(div().w(px(160.0)).child(id.clone()))
+                    .child(
+                        button(format!("{id}-rest"), "Rest", theme)
+                            .variant(variant)
+                            .color(color),
+                    )
+                    .child(
+                        button(format!("{id}-off"), "Disabled", theme)
+                            .variant(variant)
+                            .color(color)
+                            .disabled(true),
+                    ),
+            );
+        }
+    }
+    rows
+}
+
 impl Render for Gallery {
     fn render(&mut self, _window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = self.theme;
         let colors = theme.colors();
-        let mut rows = div().flex().flex_col().gap_3();
-        for (variant, variant_name) in VARIANTS {
-            for (color, color_name) in COLORS {
-                let id = format!("{variant_name}-{color_name}");
-                rows = rows.child(
-                    div()
-                        .flex()
-                        .items_center()
-                        .gap_3()
-                        .child(div().w(px(160.0)).child(id.clone()))
-                        .child(
-                            button(format!("{id}-rest"), "Rest", theme)
-                                .variant(variant)
-                                .color(color),
-                        )
-                        .child(
-                            button(format!("{id}-off"), "Disabled", theme)
-                                .variant(variant)
-                                .color(color)
-                                .disabled(true),
-                        ),
-                );
-            }
-        }
+        let rows = button_rows(theme);
         let icons = [&SEND, &CHECK, &ASSISTANT_COLOR].into_iter().fold(
             div().flex().gap_4(),
             |row, glyph| {
@@ -77,6 +87,8 @@ impl Render for Gallery {
             },
         );
         div()
+            .id("gallery")
+            .overflow_y_scroll()
             .flex()
             .flex_col()
             .items_start()
@@ -91,7 +103,12 @@ impl Render for Gallery {
                     cx.notify();
                 },
             )))
-            .child(rows)
-            .child(icons)
+            .child(
+                div()
+                    .flex()
+                    .gap_8()
+                    .child(div().flex().flex_col().gap_4().child(rows).child(icons))
+                    .child(components(theme)),
+            )
     }
 }
