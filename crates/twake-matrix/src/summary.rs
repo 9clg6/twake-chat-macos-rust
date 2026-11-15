@@ -11,6 +11,7 @@ use matrix_sdk::ruma::events::{
     AnySyncMessageLikeEvent, AnySyncTimelineEvent, SyncMessageLikeEvent, SyncStateEvent,
 };
 use matrix_sdk::{Client, Room};
+use twake_domain::read_state::UnreadCount;
 use twake_domain::room_list::RoomSummary;
 use twake_domain::{MxcUri, RoomId, Timestamp, UserId};
 
@@ -72,8 +73,12 @@ async fn display_name(room: &Room) -> String {
 
 /// No server counter: Synapse sends none with sliding sync, the client computes the counts
 /// (domain `read_state`). Only the account-data mark (D615) is read here.
-fn unread(room: &Room) -> twake_domain::read_state::UnreadCount {
-    map::unread_count(0, 0, room.is_marked_unread())
+fn unread(room: &Room) -> UnreadCount {
+    UnreadCount {
+        unread: 0,
+        mentions: 0,
+        marked_unread: room.is_marked_unread(),
+    }
 }
 
 /// The space the room says it sits in, the canonical one first.

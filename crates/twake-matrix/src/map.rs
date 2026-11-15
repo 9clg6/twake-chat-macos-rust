@@ -11,7 +11,6 @@ use twake_app::ports::{RoomListError, TimelineError};
 use twake_domain::Timestamp;
 use twake_domain::UserId;
 use twake_domain::markdown::escape_markdown;
-use twake_domain::read_state::UnreadCount;
 use twake_domain::room_list::{LastSender, RoomKind};
 use twake_domain::timeline::SendState;
 
@@ -28,16 +27,6 @@ pub fn room_kind(is_space: bool, is_direct: bool) -> RoomKind {
 /// D31: a room on "mentions" or "none" is muted.
 pub fn is_muted(mode: RoomNotificationMode) -> bool {
     !matches!(mode, RoomNotificationMode::AllMessages)
-}
-
-/// The counts of the server, each stopped at the largest value the domain holds.
-pub fn unread_count(messages: u64, mentions: u64, marked_unread: bool) -> UnreadCount {
-    let clamp = |n: u64| u32::try_from(n).unwrap_or(u32::MAX);
-    UnreadCount {
-        unread: clamp(messages),
-        mentions: clamp(mentions),
-        marked_unread,
-    }
 }
 
 /// Who wrote the last message: the user, or a person by display name (else the local part of
