@@ -68,6 +68,7 @@ impl History {
         let history = self.clone();
         server
             .mock_room_messages()
+            .expect_any_access_token() // the client signs in with `TOKEN`, not the SDK default
             .respond_with(move |request: &Request| history.page(request))
             .mount()
             .await;
