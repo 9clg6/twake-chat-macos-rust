@@ -23,6 +23,9 @@ use crate::sync::Running;
 /// nothing and no end would otherwise loop).
 const MAX_ROUNDS: usize = 20;
 
+const ABSORB_WAIT: std::time::Duration = std::time::Duration::from_millis(500);
+const ABSORB_STEP: std::time::Duration = std::time::Duration::from_millis(10);
+
 pub(crate) struct View {
     timeline: Timeline,
     state: Mutex<State>,
@@ -80,6 +83,21 @@ impl View {
         events.filter_map(to_message).collect()
     }
 
+    /// `paginate_backwards` returns before the timeline has absorbed the page (it reads the event
+    /// cache in its own task), so read again until the count moves, for `ABSORB_WAIT` at most.
+    /// ponytail: a polled pause, as the room list's (A031); a page that adds nothing costs the wait.
+    async fn snapshot_after_growth(&self, before: usize) -> Vec<Message> {
+        let mut now = self.snapshot().await;
+        for _ in 0..ABSORB_WAIT.as_millis() / ABSORB_STEP.as_millis() {
+            if now.len() != before {
+                break;
+            }
+            tokio::time::sleep(ABSORB_STEP).await;
+            now = self.snapshot().await;
+        }
+        now
+    }
+
     /// Reads the SDK, and asks for older events until `enough` holds or the start is reached.
     async fn load_until(
         &self,
@@ -97,7 +115,7 @@ impl View {
                 .paginate_backwards(page)
                 .await
                 .map_err(unavailable)?;
-            let mut grown = self.snapshot().await;
+            let mut grown = self.snapshot_after_growth(state.loaded.len()).await;
             carry_txns(&mut grown, &state.loaded);
             state.loaded = grown;
         }
