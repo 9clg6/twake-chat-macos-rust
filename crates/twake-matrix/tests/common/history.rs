@@ -11,7 +11,7 @@
 use matrix_sdk::test_utils::mocks::MatrixMockServer;
 use serde_json::{Value, json};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 use wiremock::{Request, ResponseTemplate};
 
@@ -27,6 +27,8 @@ pub struct History {
     pub events: Vec<Value>,
     /// While true, `/messages` answers 500.
     pub broken: Arc<AtomicBool>,
+    /// Milliseconds `/messages` waits before it answers.
+    pub slow_ms: Arc<AtomicU64>,
 }
 
 impl History {
@@ -35,6 +37,7 @@ impl History {
             room: room.to_string(),
             events,
             broken: Arc::default(),
+            slow_ms: Arc::default(),
         }
     }
 
@@ -68,7 +71,10 @@ impl History {
         if start > 0 {
             body["end"] = json!(format!("t{start}"));
         }
-        ResponseTemplate::new(200).set_body_json(body)
+        let delay = Duration::from_millis(self.slow_ms.load(Ordering::SeqCst));
+        ResponseTemplate::new(200)
+            .set_body_json(body)
+            .set_delay(delay)
     }
 
     /// Mounts `/messages` of the room.

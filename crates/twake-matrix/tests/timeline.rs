@@ -18,13 +18,13 @@
 mod common;
 
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::Duration;
 
 use common::history::{History, mount_send, mount_send_with, send_answer};
 use common::seed::{
     AccountData, RoomSeed, SlidingScript, TOKEN, edit_event, redaction_event, reply_event,
-    signed_in, text_event,
+    signed_in, state_event, text_event,
 };
 use futures::StreamExt;
 use futures::future::BoxFuture;
@@ -60,6 +60,8 @@ struct Served {
     script: SlidingScript,
     /// While true, `/messages` answers 500.
     broken: Arc<AtomicBool>,
+    /// Milliseconds `/messages` waits before it answers.
+    slow_ms: Arc<AtomicU64>,
     _server: MatrixMockServer,
     _dir: TempDir,
 }
@@ -99,6 +101,7 @@ async fn serve_with(me: &UserId, events: Vec<Value>, send: ResponseTemplate) -> 
         port: MatrixTimeline::new(client),
         script,
         broken: history.broken,
+        slow_ms: history.slow_ms,
         _server: server,
         _dir: dir,
     }
@@ -193,6 +196,7 @@ async fn serve_room(me: &UserId, room: &str, events: Vec<Value>) -> Served {
         port: MatrixTimeline::new(client),
         script,
         broken: history.broken,
+        slow_ms: history.slow_ms,
         _server: server,
         _dir: dir,
     }
@@ -432,4 +436,115 @@ async fn a_page_the_server_cannot_give_is_unavailable_without_leaking_the_token(
         .expect("the opening fails");
     assert_eq!(error, TimelineError::Unavailable);
     assert!(!format!("{error} {error:?}").contains(TOKEN));
+}
+
+// A page asked after a good opening: the SDK answers from its cache or asks the server again.
+#[tokio::test]
+async fn a_page_back_the_server_refuses_after_opening_is_unavailable_without_the_token() {
+    let served = serve(&alice(), texts(100), Duration::from_secs(120)).await;
+    let (_stream, _) = open(&served).await;
+    served.broken.store(true, Ordering::SeqCst);
+    let started = std::time::Instant::now();
+    let error = tokio::time::timeout(WAIT, served.paginate_back(room()))
+        .await
+        .expect("a failing server must not hang the page back")
+        .expect_err("the page back fails");
+    assert_eq!(error, TimelineError::Unavailable);
+    assert!(started.elapsed() < Duration::from_secs(10));
+    assert!(!format!("{error} {error:?}").contains(TOKEN));
+}
+
+// ------------------------------------------------------------ pages without a message
+
+/// `old` texts, then `noise` state events (no message item), then `recent` texts: ids `$m0..`
+/// in order, the noise between `$m{old-1}` and `$m{old}`.
+fn texts_with_noise(old: usize, noise: usize, recent: usize) -> Vec<Value> {
+    let text = |i: usize| text_event(&format!("$m{i}"), BOB, 1_000 + i as u64, &format!("m{i}"));
+    let mut events: Vec<Value> = (0..old).map(text).collect();
+    events.extend(
+        (0..noise)
+            .map(|i| state_event("org.example.noise", &format!("k{i}"), BOB, json!({"n": i}))),
+    );
+    events.extend((old..old + recent).map(text));
+    events
+}
+
+async fn prepend(
+    served: &Served,
+    stream: &mut BoxStream<'static, Vec<TimelineDiff>>,
+) -> (Vec<String>, bool) {
+    tokio::time::timeout(WAIT, served.paginate_back(room()))
+        .await
+        .expect("the page back does not hang")
+        .expect("the page back succeeds");
+    let TimelineDiff::Prepend {
+        messages,
+        reached_start,
+    } = next_batch(stream).await.remove(0)
+    else {
+        panic!("a page back is one Prepend");
+    };
+    (ids(&messages), reached_start)
+}
+
+fn range(from: usize, to: usize) -> Vec<String> {
+    (from..to).map(|i| format!("$m{i}")).collect()
+}
+
+// An older page made of state events only holds no message: the history behind it is still
+// there, so the page back goes on and gives a full page, not an empty one (contract: an empty
+// page means the start), and the start is not reached while the server gives a further token.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_page_of_events_without_message_does_not_hide_the_history_behind_it() {
+    let served = serve(
+        &alice(),
+        texts_with_noise(40, 40, 35),
+        Duration::from_secs(120),
+    )
+    .await;
+    let (mut stream, first) = open(&served).await;
+    assert_eq!(ids(&first), range(45, 75));
+
+    let (page, reached_start) = prepend(&served, &mut stream).await;
+    assert_eq!(page, range(15, 45));
+    assert!(!reached_start, "the server still has older events");
+
+    let (page, reached_start) = prepend(&served, &mut stream).await;
+    assert_eq!(page, range(0, 15));
+    assert!(reached_start);
+}
+
+// The same, when the noise is the oldest thing the room has: the start is reached.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_history_that_ends_with_events_without_message_reaches_the_start() {
+    let served = serve(
+        &alice(),
+        texts_with_noise(0, 40, 36),
+        Duration::from_secs(120),
+    )
+    .await;
+    let (mut stream, first) = open(&served).await;
+    assert_eq!(ids(&first), range(6, 36));
+
+    let (page, reached_start) = prepend(&served, &mut stream).await;
+    assert_eq!(page, range(0, 6));
+    assert!(reached_start, "nothing but noise is left behind");
+}
+
+// A server that takes 700 ms per page (longer than the 500 ms the adapter waits for the
+// absorption of a page): a page is never given short, nor the start declared early.
+// The absorption lag itself is in-process, after the answer: wiremock cannot delay it.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_slow_server_still_gives_whole_pages() {
+    let served = serve(&alice(), texts(80), Duration::from_secs(120)).await;
+    let (mut stream, first) = open(&served).await;
+    assert_eq!(ids(&first), range(50, 80));
+    served.slow_ms.store(700, Ordering::SeqCst);
+
+    let (page, reached_start) = prepend(&served, &mut stream).await;
+    assert_eq!(page, range(20, 50));
+    assert!(!reached_start);
+    let (page, reached_start) = prepend(&served, &mut stream).await;
+    assert_eq!(page, range(0, 20));
+    assert!(reached_start);
 }
