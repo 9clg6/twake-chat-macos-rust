@@ -92,13 +92,15 @@ fn subscribe(
 
 fn first_batch_is_the_whole_list(make: MakeRoomList<'_>) -> Verdict {
     let seed = vec![seed_room(1), seed_room(2), seed_room(3)];
-    let mut batches = subscribe(&make(seed.clone()))?;
+    let port = make(seed.clone());
+    let mut batches = subscribe(&port)?;
     let rooms = reset_rooms(first_batch(&mut batches)?)?;
     same("the first Reset holds the seeded rooms", rooms, by_id(seed))
 }
 
 fn an_account_without_room_starts_with_an_empty_reset(make: MakeRoomList<'_>) -> Verdict {
-    let mut batches = subscribe(&make(vec![]))?;
+    let port = make(vec![]);
+    let mut batches = subscribe(&port)?;
     let rooms = reset_rooms(first_batch(&mut batches)?)?;
     same("an empty account starts with an empty Reset", rooms, vec![])
 }
@@ -185,7 +187,8 @@ pub fn timeline(make: impl Fn(UserId, RoomId, Vec<Message>) -> Arc<dyn TimelineP
 
 fn opening_gives_the_last_page_in_one_reset(make: MakeTimeline<'_>) -> Verdict {
     let all = history(TIMELINE_PAGE_SIZE + 45);
-    let mut batches = open(&make(me(), room_id(1), all.clone()), 1)?;
+    let port = make(me(), room_id(1), all.clone());
+    let mut batches = open(&port, 1)?;
     let want = vec![TimelineDiff::Reset(all[45..].to_vec())];
     same(
         "opening shows the last page",
@@ -196,7 +199,8 @@ fn opening_gives_the_last_page_in_one_reset(make: MakeTimeline<'_>) -> Verdict {
 
 fn opening_a_short_history_gives_all_of_it(make: MakeTimeline<'_>) -> Verdict {
     let all = history(4);
-    let mut batches = open(&make(me(), room_id(1), all.clone()), 1)?;
+    let port = make(me(), room_id(1), all.clone());
+    let mut batches = open(&port, 1)?;
     same(
         "a short history shows whole",
         first_batch(&mut batches)?,
