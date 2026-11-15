@@ -70,13 +70,10 @@ async fn display_name(room: &Room) -> String {
     }
 }
 
+/// No server counter: Synapse sends none with sliding sync, the client computes the counts
+/// (domain `read_state`). Only the account-data mark (D615) is read here.
 fn unread(room: &Room) -> twake_domain::read_state::UnreadCount {
-    let counts = room.unread_notification_counts();
-    map::unread_count(
-        counts.notification_count,
-        counts.highlight_count,
-        room.is_marked_unread(),
-    )
+    map::unread_count(0, 0, room.is_marked_unread())
 }
 
 /// The space the room says it sits in, the canonical one first.
