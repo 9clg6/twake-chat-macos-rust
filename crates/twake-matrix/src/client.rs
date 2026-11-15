@@ -52,6 +52,8 @@ pub async fn build_client(
     Client::builder()
         .homeserver_url(homeserver.as_str())
         .sliding_sync_version_builder(VersionBuilder::Native)
+        // ponytail: 3 retries, not the SDK's unbounded default: a server in error must end a call.
+        .request_config(matrix_sdk::config::RequestConfig::short_retry())
         .sqlite_store_with_config_and_cache_path(
             SqliteStoreConfig::new(dir).key(Some(&key)),
             None::<&Path>,
