@@ -11,7 +11,7 @@ use matrix_sdk::{Client, Room};
 use matrix_sdk_ui::eyeball_im::{Vector, VectorDiff};
 use matrix_sdk_ui::room_list_service::filters::new_filter_non_left;
 use matrix_sdk_ui::room_list_service::{RoomList, RoomListItem};
-use tokio::sync::{broadcast, mpsc, oneshot};
+use tokio::sync::{broadcast, mpsc};
 use twake_app::ports::{RoomListError, RoomListPort};
 use twake_domain::RoomId;
 use twake_domain::room_list::{RoomListDiff, RoomSummary};
@@ -41,11 +41,7 @@ impl RoomListPort for MatrixRoomList {
             let running = self.sync.ensure().await?;
             let list = running.service.all_rooms().await.map_err(service_error)?;
             let (tx, mut rx) = mpsc::unbounded_channel();
-            let (sent, first_sent) = oneshot::channel();
-            tokio::spawn(feed(running, list, self.sync.client().clone(), tx, sent));
-            // The first `Reset` is built before `subscribe` answers: the caller may drop
-            // what feeds the account (a store folder, a server) as soon as it has the stream.
-            let _ = first_sent.await;
+            tokio::spawn(feed(running, list, self.sync.client().clone(), tx));
             let batches = stream::poll_fn(move |cx| rx.poll_recv(cx));
             Ok(batches.boxed())
         })
@@ -64,7 +60,6 @@ async fn feed(
     list: RoomList,
     client: Client,
     tx: mpsc::UnboundedSender<Vec<RoomListDiff>>,
-    first_sent: oneshot::Sender<()>,
 ) {
     // ponytail: no cap on the rooms shown, the sort and the paging belong to the domain.
     let (diffs, controller) = list.entries_with_dynamic_adapters(usize::MAX);
@@ -81,7 +76,6 @@ async fn feed(
     if tx.send(vec![RoomListDiff::Reset(all)]).is_err() {
         return;
     }
-    let _ = first_sent.send(());
     while let Some(event) = events.next().await {
         let batch = mirror.apply(&client, event).await;
         if !batch.is_empty() && tx.send(batch).is_err() {
