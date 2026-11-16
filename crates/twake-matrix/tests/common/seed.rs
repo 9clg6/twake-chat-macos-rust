@@ -289,6 +289,11 @@ struct Script {
     first: Vec<RoomSeed>,
     account_data: AccountData,
     next: VecDeque<Vec<RoomSeed>>,
+    /// Polls still to refuse, with the status to answer (wiring lot: the sync must come back).
+    failing: u32,
+    fail_status: u16,
+    /// When each refused poll arrived.
+    refused_at: Vec<std::time::Instant>,
 }
 
 /// The sliding sync endpoint: the first response holds the seeded rooms, `push` queues what
@@ -302,7 +307,31 @@ impl SlidingScript {
             first: rooms,
             account_data,
             next: VecDeque::new(),
+            failing: 0,
+            fail_status: 403,
+            refused_at: vec![],
         })))
+    }
+
+    /// The next `count` requests of the sync (any, with or without `pos`) are refused with
+    /// `status` and a Matrix error body; the ones after are served again.
+    pub fn fail_next(&self, count: u32, status: u16) {
+        let mut script = self.0.lock().unwrap();
+        script.failing = count;
+        script.fail_status = status;
+    }
+
+    /// When each refused request arrived, in order.
+    pub fn refused_at(&self) -> Vec<std::time::Instant> {
+        self.0.lock().unwrap().refused_at.clone()
+    }
+
+    /// Rooms that show up whether the client resumes with a `pos` (an update) or starts the
+    /// connection again (an initial response): a restart of the sync sees them either way.
+    pub fn later(&self, rooms: Vec<RoomSeed>) {
+        let mut script = self.0.lock().unwrap();
+        script.first.extend(rooms.iter().cloned());
+        script.next.push_back(rooms);
     }
 
     /// The next poll brings these rooms (an update of a known room carries `initial: false`).
@@ -314,6 +343,12 @@ impl SlidingScript {
         let body: Value = request.body_json().unwrap_or_default();
         let has_pos = request.url.query_pairs().any(|(k, _)| k == "pos");
         let mut script = self.0.lock().unwrap();
+        if script.failing > 0 {
+            script.failing -= 1;
+            script.refused_at.push(std::time::Instant::now());
+            return ResponseTemplate::new(script.fail_status)
+                .set_body_json(json!({"errcode": "M_FORBIDDEN", "error": "scripted refusal"}));
+        }
         let (rooms, initial) = if !has_pos {
             (script.first.clone(), true)
         } else {

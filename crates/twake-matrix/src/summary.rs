@@ -11,9 +11,12 @@ use matrix_sdk::ruma::events::{
     AnySyncMessageLikeEvent, AnySyncTimelineEvent, SyncMessageLikeEvent, SyncStateEvent,
 };
 use matrix_sdk::{Client, Room};
-use twake_domain::read_state::UnreadCount;
+use twake_domain::read_state::{
+    NotificationLevel, ReadContext, RoomFlags, RoomReadState, TimelineEvent as ReadEvent,
+    UnreadCount, room_unread, timeline_read_state,
+};
 use twake_domain::room_list::RoomSummary;
-use twake_domain::{MxcUri, RoomId, Timestamp, UserId};
+use twake_domain::{EventId, MxcUri, RoomId, Timestamp, UserId};
 
 use crate::map;
 
@@ -51,10 +54,10 @@ pub(crate) async fn summarise(ctx: &Ctx, room: &Room) -> Option<RoomSummary> {
     row.avatar = room
         .avatar_url()
         .and_then(|u| MxcUri::parse(u.as_str()).ok());
-    row.unread = unread(room);
     row.is_favourite = room.is_favourite();
     row.is_low_priority = room.is_low_priority();
     row.is_muted = ctx.is_muted(room).await;
+    row.unread = unread(ctx, room, row.is_muted).await;
     row.space = parent_space(room).await;
     last_message(ctx, room, &mut row).await;
     Some(row)
@@ -72,13 +75,64 @@ async fn display_name(room: &Room) -> String {
 }
 
 /// No server counter: Synapse sends none with sliding sync, the client computes the counts
-/// (domain `read_state`). Only the account-data mark (D615) is read here.
-fn unread(room: &Room) -> UnreadCount {
-    UnreadCount {
-        unread: 0,
-        mentions: 0,
-        marked_unread: room.is_marked_unread(),
+/// from the events of the cache (domain `read_state`), and the account-data mark (D615).
+/// ponytail: main timeline only, no receipts, no threads, nobody ignored; the cache holds the
+/// recent events only, so the count caps at what it holds.
+async fn unread(ctx: &Ctx, room: &Room, muted: bool) -> UnreadCount {
+    let marked_unread = room.is_marked_unread();
+    let Some(me) = ctx.me.clone() else {
+        return UnreadCount {
+            unread: 0,
+            mentions: 0,
+            marked_unread,
+        };
+    };
+    let events = read_events(room, &me).await;
+    let read = ReadContext::new(me);
+    let state = RoomReadState {
+        main: timeline_read_state(&events, &read),
+        threads: vec![],
+    };
+    let notification_level = if muted {
+        NotificationLevel::Nothing
+    } else {
+        NotificationLevel::All
+    };
+    let flags = RoomFlags {
+        notification_level,
+        marked_unread,
+    };
+    room_unread(&state, &flags)
+}
+
+async fn read_events(room: &Room, me: &UserId) -> Vec<ReadEvent> {
+    let Ok((cache, _keep)) = room.event_cache().await else {
+        return vec![];
+    };
+    let events = cache.events().await.unwrap_or_default();
+    events.iter().filter_map(|e| read_event(e, me)).collect()
+}
+
+/// An event of the cache as the count sees it: a shown message, or something never counted.
+fn read_event(event: &TimelineEvent, me: &UserId) -> Option<ReadEvent> {
+    let parsed = event.raw().deserialize().ok()?;
+    let id = EventId::parse(parsed.event_id().as_str()).ok()?;
+    let sender = UserId::parse(parsed.sender().as_str()).ok()?;
+    let AnySyncTimelineEvent::MessageLike(AnySyncMessageLikeEvent::RoomMessage(
+        SyncMessageLikeEvent::Original(message),
+    )) = parsed
+    else {
+        return Some(ReadEvent::other(id, sender));
+    };
+    if matches!(message.content.relates_to, Some(Relation::Replacement(_))) {
+        return Some(ReadEvent::other(id, sender));
     }
+    let mentioned = message
+        .content
+        .mentions
+        .is_some_and(|m| m.room || m.user_ids.iter().any(|u| u.as_str() == me.as_str()));
+    let read = ReadEvent::message(id, sender);
+    Some(if mentioned { read.mentioning_me() } else { read })
 }
 
 /// The space the room says it sits in, the canonical one first.
