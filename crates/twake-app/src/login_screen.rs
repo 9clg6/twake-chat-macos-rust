@@ -147,18 +147,21 @@ impl LoginScreen {
             SessionState::LoggingIn(homeserver) => LoginView::SigningIn {
                 homeserver: homeserver.clone(),
             },
-            SessionState::Active(s) => LoginView::SignedIn {
-                user: s.user_id.clone(),
-            },
-            SessionState::Expired(s) => LoginView::SessionExpired {
-                user: s.user_id.clone(),
-            },
-            SessionState::SigningOut(s) => LoginView::SigningOut {
-                user: s.user_id.clone(),
-            },
-            SessionState::SignOutFailed(s) => LoginView::SignOutFailed {
-                user: s.user_id.clone(),
-            },
+            account => account_view(account),
+        }
+    }
+
+    fn choice_view(&self, homeserver: HomeserverUrl, problem: Option<LoginProblem>) -> LoginView {
+        if self.browser_open {
+            LoginView::WaitingForBrowser {
+                homeserver,
+                problem,
+            }
+        } else {
+            LoginView::ChooseSignIn {
+                homeserver,
+                problem,
+            }
         }
     }
 
@@ -170,5 +173,24 @@ impl LoginScreen {
     /// The device of the machine.
     pub fn device_id(&self) -> Option<&DeviceId> {
         self.machine.device_id()
+    }
+}
+
+/// The views of a signed-in account: it is named, whatever happens to it.
+fn account_view(state: &SessionState) -> LoginView {
+    match state {
+        SessionState::Active(s) => LoginView::SignedIn {
+            user: s.user_id.clone(),
+        },
+        SessionState::Expired(s) => LoginView::SessionExpired {
+            user: s.user_id.clone(),
+        },
+        SessionState::SigningOut(s) => LoginView::SigningOut {
+            user: s.user_id.clone(),
+        },
+        SessionState::SignOutFailed(s) => LoginView::SignOutFailed {
+            user: s.user_id.clone(),
+        },
+        _ => LoginView::EnterServer { problem: None },
     }
 }
