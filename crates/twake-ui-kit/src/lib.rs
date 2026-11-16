@@ -6,6 +6,7 @@ pub mod button;
 pub mod chip;
 pub mod color;
 pub mod dialog;
+pub mod fonts;
 pub mod icon;
 pub mod icon_button;
 pub mod menu;

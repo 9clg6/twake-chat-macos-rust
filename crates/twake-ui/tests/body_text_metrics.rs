@@ -26,7 +26,9 @@ fn measured_average(weight: u16) -> f32 {
     let scale = BODY_PX / f32::from(face.units_per_em());
     let (mut total, mut count) = (0.0_f32, 0_u32);
     for ch in SAMPLES.iter().flat_map(|s| s.chars()) {
-        let glyph = face.glyph_index(ch).unwrap_or_else(|| panic!("no glyph for {ch:?}"));
+        let glyph = face
+            .glyph_index(ch)
+            .unwrap_or_else(|| panic!("no glyph for {ch:?}"));
         let advance = face.glyph_hor_advance(glyph).expect("advance");
         total += f32::from(advance) * scale;
         count += 1;
@@ -49,5 +51,8 @@ fn the_estimated_char_width_is_the_measured_one_of_inter_regular_15_px() {
 fn the_estimate_is_no_longer_the_system_font_guess_of_seven_pixels() {
     // Inter is wider than the 7.0 px assumed for the system font: 7.0 is out of tolerance.
     let measured = measured_average(400);
-    assert!((7.0 - measured).abs() / measured > 0.03, "measured {measured:.2}");
+    assert!(
+        (7.0 - measured).abs() / measured > 0.03,
+        "measured {measured:.2}"
+    );
 }

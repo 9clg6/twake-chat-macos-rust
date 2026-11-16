@@ -198,6 +198,19 @@ merged before the code that needs it. Product decisions of the React app keep th
   3. The real keychain adapter is spike S3; only the `Keychain` trait and a memory fake exist.
 - Consequences: a caller never passes a path to `sign_out`; the keychain entry is cleared by the caller through `SessionStorePort`.
 
+## A032 Inter 4.1 embedded: four static TTF, registered before the first window
+- Context: the design system's `FONT_FAMILY` starts with "Inter" (A029 item 4 left it for later); without the font, GPUI falls back to the system font on every OS.
+- Decision:
+  1. The four static TTF `Inter-{Regular,Medium,SemiBold,Bold}.ttf` (weights 400 to 700, from `extras/ttf/` of the Inter 4.1 release) are in `crates/twake-ui-kit/assets/fonts/`, with `LICENSE.txt`, `SOURCE.txt` (release URL and sha256 of the zip `9883fdd4...b11e`) and `SHA256SUMS`. They load into the text system as one family "Inter" with four distinct faces (checked at run time: `resolve_font` finds each weight directly, no fallback). Files are unmodified.
+  2. `twake_ui_kit::fonts` holds `FAMILY`, `LICENSE` (`include_str!`), `embedded()` and `register(&TextSystem)`, which calls `twake_gpui::register_fonts` (a thin pass-through to `TextSystem::add_fonts`). `twake-desktop` registers before opening any window (normal, gallery and preview alike), and the root view of each sets `font_family(FAMILY)`; the children inherit it.
+  3. Licence: SIL OFL 1.1, no Reserved Font Name. The licence text ships with the fonts (in the repo and in the binary through `fonts::LICENSE`); the fonts may not be sold alone. A third-party licences screen of the app must show it when there is one.
+  4. Size: the four faces add about 1.66 MB to the binary (`include_bytes!`).
+  5. Estimate: `bubble_style::BODY_CHAR_WIDTH_PX` = 7.2 px replaces the 7.0 guess of A026. It is the mean advance of Inter Regular 15 px on four English and French chat sentences (7.17 px); `estimated_height` uses it. Re-measure if the body size or the font changes.
+  6. Bumping Inter: download the new release zip, check its sha256, replace the four TTF and `LICENSE.txt`, update `SOURCE.txt` and `SHA256SUMS` (`sha256sum`), update the hash in `tests/fonts.rs` (spec-tester), re-measure item 5.
+- Rejected: `InterVariable.ttf` (GPUI variable-font handling untested, A029); a system-installed Inter (not on a clean machine).
+- Known gaps: Italic and the other weights are not embedded (the UI uses 400 to 700 only); the two `fonts.rs` specs that build a text system (`inter_is_a_family...`, `a_layout_in_inter...`) cannot run under `cargo test`, which does not run tests on the main thread (`MacPlatform::new` needs it); the same facts were checked once in the real app. Spec `the_estimate_is_no_longer_the_system_font_guess_of_seven_pixels` asks 7.0 to be over 3 % off the measure, but the measure is 7.17 px (2.4 %): it cannot pass with the other spec.
+- Risk: `add_fonts` failure aborts the start (`expect`); a bad blob would show in the first run.
+
 ## A031 Matrix adapters, lot 2 (read): room list and timeline - deviations to validate
 - Context: `MatrixRoomList` (`RoomListPort` on matrix-sdk-ui `RoomListService`, sliding sync MSC4186), `MatrixTimeline` (`TimelinePort` on `Timeline`), and the pure `twake_matrix::map`; tests in `crates/twake-matrix/tests/{map,room_list,timeline,fixtures}.rs` on a mock homeserver (no real account).
 - Decision:

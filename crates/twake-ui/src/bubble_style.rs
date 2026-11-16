@@ -14,6 +14,9 @@ const RADIUS_PX: f32 = 16.0;
 const PADDING_X_PX: f32 = 16.0;
 const PADDING_Y_PX: f32 = 8.0;
 const FONT_SIZE_PX: f32 = 15.0;
+/// Average advance of a character of chat prose in Inter Regular 15 px (A032): the estimate of
+/// the height of a bubble before its text is measured.
+pub const BODY_CHAR_WIDTH_PX: f32 = 7.2;
 const LINE_HEIGHT_PX: f32 = 20.0;
 /// Share of the column an own bubble tints: `color-mix(in srgb, primary 12%, paper)`.
 const OWN_TINT: f32 = 0.12;

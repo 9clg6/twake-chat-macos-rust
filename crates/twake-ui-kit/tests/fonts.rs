@@ -64,7 +64,11 @@ fn each_embedded_font_is_a_real_truetype_file_of_its_weight() {
         let face = ttf_parser::Face::parse(font.data, 0)
             .unwrap_or_else(|e| panic!("{} does not parse: {e}", font.file_name));
         assert_eq!(face.weight().to_number(), font.weight, "{}", font.file_name);
-        assert!(face.number_of_glyphs() > 1000, "{} is a stub", font.file_name);
+        assert!(
+            face.number_of_glyphs() > 1000,
+            "{} is a stub",
+            font.file_name
+        );
     }
 }
 
@@ -102,11 +106,18 @@ fn the_font_files_match_the_pinned_sha256_list() {
     let mut names: Vec<&str> = listed.iter().map(|(n, _)| *n).collect();
     names.sort_unstable();
     expected.sort_unstable();
-    assert_eq!(names, expected, "SHA256SUMS lists exactly the shipped files");
+    assert_eq!(
+        names, expected,
+        "SHA256SUMS lists exactly the shipped files"
+    );
     for (name, hash) in listed {
         assert_eq!(hash.len(), 64, "{name}");
         let bytes = fs::read(dir.join(name)).unwrap_or_else(|e| panic!("{name}: {e}"));
-        assert_eq!(sha256_hex(&bytes), hash, "{name} differs from the pinned hash");
+        assert_eq!(
+            sha256_hex(&bytes),
+            hash,
+            "{name} differs from the pinned hash"
+        );
     }
 }
 
@@ -157,5 +168,9 @@ fn a_layout_in_inter_at_each_weight_resolves_to_inter_and_not_to_a_fallback() {
     }
     ids.sort_by_key(|id| id.0);
     ids.dedup();
-    assert_eq!(ids.len(), 4, "each weight is its own face, not one face stretched");
+    assert_eq!(
+        ids.len(),
+        4,
+        "each weight is its own face, not one face stretched"
+    );
 }

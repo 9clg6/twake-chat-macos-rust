@@ -16,6 +16,7 @@ use twake_gpui::{
 use twake_i18n::Locale;
 use twake_ui::timeline_rows::{TimelineContext, timeline_rows};
 use twake_ui::view::{RoomListView, RoomSelected, TimelineView};
+use twake_ui_kit::fonts::FAMILY;
 use twake_ui_kit::theme::Theme;
 use twake_ui_kit::view::{Submit, TextInput, hsla};
 
@@ -176,6 +177,7 @@ impl Preview {
 impl Render for Preview {
     fn render(&mut self, _window: &mut Window, _cx: &mut Context<Self>) -> impl IntoElement {
         div()
+            .font_family(FAMILY)
             .flex()
             .size_full()
             .bg(hsla(self.theme.colors().background.default))

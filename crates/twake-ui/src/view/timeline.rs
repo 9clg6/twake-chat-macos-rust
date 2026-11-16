@@ -10,15 +10,13 @@ use twake_ui_kit::theme::Theme;
 use twake_ui_kit::view::hsla;
 
 use super::{HEADER_HEIGHT, OVERSCAN, avatar, clamp, scrolled, viewport};
-use crate::bubble_style::{BubbleStyle, wallpaper};
+use crate::bubble_style::{BODY_CHAR_WIDTH_PX, BubbleStyle, wallpaper};
 use crate::room_row_style::LIST_WIDTH_PX;
 use crate::timeline_rows::{BubbleView, QuoteView, RowView, Side, Ticks};
 use crate::virtual_list::HeightIndex;
 
 /// Width of the column before the first draw, until the window says its own.
 const ESTIMATE_COLUMN: f32 = 800.0;
-/// Average width of a character of the 15 px body text.
-const AVERAGE_CHAR_WIDTH: f32 = 7.0;
 const CAPTION_PX: f32 = 12.0;
 const DIVIDER_PADDING_X: f32 = 12.0;
 /// Padding of a line of the conversation, and the gap between its avatar and its bubble.
@@ -77,7 +75,7 @@ fn estimated_height(row: &RowView, theme: Theme, column_px: f32) -> f32 {
     };
     let style = BubbleStyle::resolve(bubble.side, &theme, container_px(bubble.side, column_px));
     let width = style.max_width_px - 2.0 * style.padding_x_px;
-    let per_line = (width / AVERAGE_CHAR_WIDTH) as usize;
+    let per_line = (width / BODY_CHAR_WIDTH_PX) as usize;
     let lines = wrap_lines(&bubble.body, per_line) as f32;
     let name = if bubble.shows_name { NAME_HEIGHT } else { 0.0 };
     let quote = if bubble.quote.is_some() {

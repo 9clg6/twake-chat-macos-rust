@@ -6,8 +6,8 @@ use twake_domain::EventId;
 use twake_ui_kit::theme::{ColorScheme, Theme};
 
 use super::{estimated_height, tick_text, wrap_lines};
-use crate::bubble_style::BODY_CHAR_WIDTH_PX;
 use crate::avatar::AvatarView;
+use crate::bubble_style::BODY_CHAR_WIDTH_PX;
 use crate::timeline_rows::{BubbleView, DayDividerView, QuoteView, RowView, Side, Ticks};
 
 fn bubble(side: Side, body: &str) -> BubbleView {

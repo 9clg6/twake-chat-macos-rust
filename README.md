@@ -32,3 +32,7 @@ then `cargo xtask tokens`.
 
 Checks: `cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test --workspace`.
 On Linux, GPUI needs `libwayland-dev libxkbcommon-dev libxkbcommon-x11-dev libx11-dev libvulkan-dev libfontconfig1-dev libdbus-1-dev`.
+
+## Third-party fonts
+
+Inter 4.1 (SIL Open Font License 1.1) is embedded: `crates/twake-ui-kit/assets/fonts/LICENSE.txt`. The fonts ship with their licence and are not sold on their own (A032).

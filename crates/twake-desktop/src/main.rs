@@ -7,6 +7,7 @@ use twake_gpui::{
     WindowBounds, WindowOptions, div, prelude::*, px, rgb, size,
 };
 use twake_tokens::{LIGHT, Rgba8};
+use twake_ui_kit::fonts::{self, FAMILY};
 use twake_ui_kit::view::IconAssets;
 
 mod gallery;
@@ -31,6 +32,7 @@ impl Render for Root {
             .size_full()
             .justify_center()
             .items_center()
+            .font_family(FAMILY)
             .bg(rgb(packed(LIGHT.background.paper)))
             .text_color(rgb(packed(LIGHT.text.primary)))
             .text_xl()
@@ -47,6 +49,7 @@ fn main() {
     twake_gpui::gpui_platform::application()
         .with_assets(IconAssets)
         .run(move |cx: &mut App| {
+            fonts::register(&cx.text_system()).expect("register the embedded Inter");
             let (width, height) = if gallery { GALLERY_SIZE } else { WINDOW_SIZE };
             let bounds = Bounds::centered(None, size(px(width), px(height)), cx);
             let options = WindowOptions {
