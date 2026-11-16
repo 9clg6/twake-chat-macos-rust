@@ -132,7 +132,11 @@ fn read_event(event: &TimelineEvent, me: &UserId) -> Option<ReadEvent> {
         .mentions
         .is_some_and(|m| m.room || m.user_ids.iter().any(|u| u.as_str() == me.as_str()));
     let read = ReadEvent::message(id, sender);
-    Some(if mentioned { read.mentioning_me() } else { read })
+    Some(if mentioned {
+        read.mentioning_me()
+    } else {
+        read
+    })
 }
 
 /// The space the room says it sits in, the canonical one first.
