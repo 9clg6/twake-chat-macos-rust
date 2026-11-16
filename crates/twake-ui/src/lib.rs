@@ -4,6 +4,7 @@
 pub mod avatar;
 pub mod bubble_style;
 mod clock;
+pub mod login_screen;
 pub mod room_row;
 pub mod room_row_style;
 pub mod timeline_rows;
