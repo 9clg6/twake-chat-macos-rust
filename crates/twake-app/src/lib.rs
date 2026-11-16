@@ -1,5 +1,6 @@
 //! Use cases and the port traits the adapters implement.
 
+pub mod boot;
 pub mod composer;
 pub mod login_screen;
 pub mod message_actions;
