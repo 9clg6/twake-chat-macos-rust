@@ -17,3 +17,10 @@ unicode-segmentation = "1"
 
 [dev-dependencies]
 proptest = "1"
+sha2 = "0.10"
+ttf-parser = "0.25"
+
+# `current_platform` needs the main thread: this target runs its own `main`.
+[[test]]
+name = "fonts_text_system"
+harness = false

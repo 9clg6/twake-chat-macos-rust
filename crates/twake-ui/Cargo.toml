@@ -17,3 +17,4 @@ twake-i18n = { path = "../twake-i18n" }
 
 [dev-dependencies]
 proptest = "1"
+ttf-parser = "0.25"

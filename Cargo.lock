@@ -8192,6 +8192,7 @@ name = "twake-ui"
 version = "0.1.0"
 dependencies = [
  "proptest",
+ "ttf-parser",
  "twake-app",
  "twake-domain",
  "twake-gpui",
@@ -8204,6 +8205,8 @@ name = "twake-ui-kit"
 version = "0.1.0"
 dependencies = [
  "proptest",
+ "sha2 0.10.9",
+ "ttf-parser",
  "twake-domain",
  "twake-gpui",
  "twake-icons",

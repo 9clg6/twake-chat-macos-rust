@@ -9,6 +9,7 @@ use twake_gpui::{
 use twake_icons::{ASSISTANT_COLOR, CHECK, SEND};
 use twake_tokens::Rgba8;
 use twake_ui_kit::button::{ButtonColor, ButtonVariant};
+use twake_ui_kit::fonts::FAMILY;
 use twake_ui_kit::icon::{IconColor, IconSpec};
 use twake_ui_kit::theme::Theme;
 use twake_ui_kit::view::{button, icon};
@@ -88,6 +89,7 @@ impl Render for Gallery {
         );
         div()
             .id("gallery")
+            .font_family(FAMILY)
             .overflow_y_scroll()
             .flex()
             .flex_col()

@@ -301,7 +301,7 @@ Enforced in CI, ratchet style (limits can only tighten; a suppression list can o
 | S4 | Updater: Sparkle vs `cargo-packager-updater` vs Velopack. | Signed update applied on macOS from a test feed. |
 | S5 | `livekit` with rustls only; libwebrtc cost. | A 1:1 call on macOS; CI minutes and bundle size measured. |
 | S6 | Tray and native menu next to GPUI's loop (Windows/Linux). | Prototype per OS. |
-| S7 | Inter font licence and bundling. | Licence read; font shipped or fallback chosen. |
+| S7 | Inter font licence and bundling. | Done: Inter 4.1 embedded, SIL OFL 1.1 (A032). |
 
 | S8 | SSO loopback against the Twake Synapse (redirect URL allowed by the IdP?). | Sign-in completed on macOS with a loopback port. |
 | S9 | i18n format: read the web `en.json` (plurals, interpolation, ICU?) before fixing Fluent vs generating from the web files. | Decision A006 written with a sample of 20 real strings. |
