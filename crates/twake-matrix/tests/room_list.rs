@@ -183,6 +183,16 @@ fn seed_of(summary: &RoomSummary) -> RoomSeed {
     if let Some(name) = name {
         seed = seed.with_member(sender, name);
     }
+    // The adapter counts the messages of others after the read point (the last own message):
+    // one more of them than the count says, the last, is the preview.
+    for i in 1..summary.unread.unread {
+        seed = seed.with_message(text_event(
+            &format!("$earlier{i}"),
+            sender,
+            summary.last_activity.as_millis() - u64::from(i),
+            "earlier",
+        ));
+    }
     match &summary.last_message_preview {
         Some(text) => seed.with_message(text_event(
             "$last",
