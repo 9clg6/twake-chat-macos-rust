@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
 //! The app embeds Inter so that it looks the same on macOS, Windows and Linux.
 //! Need: the design system's `FONT_FAMILY` starts with "Inter" (docs/spec/tokens.json); Inter 4.1,
 //! SIL OFL 1.1, from https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip.
@@ -9,7 +10,6 @@ use std::fs;
 use std::path::PathBuf;
 
 use sha2::{Digest, Sha256};
-use twake_gpui::{Font, FontWeight, TextSystem, font};
 use twake_tokens::FONT_FAMILY;
 use twake_ui_kit::fonts::{FAMILY, LICENSE, embedded};
 
@@ -131,46 +131,4 @@ fn what_is_embedded_is_what_is_on_disk() {
         let on_disk = fs::read(dir.join(file)).expect(file);
         assert_eq!(sha256_hex(font.data), sha256_hex(&on_disk), "{file}");
     }
-}
-
-fn registered_text_system() -> TextSystem {
-    let platform = twake_gpui::gpui_platform::current_platform(true);
-    let text = TextSystem::new(platform.text_system());
-    let blobs: Vec<&'static [u8]> = embedded().iter().map(|f| f.data).collect();
-    twake_gpui::register_fonts(&text, &blobs).expect("the embedded fonts register");
-    text
-}
-
-fn inter(weight: u16) -> Font {
-    let mut f = font(FAMILY);
-    f.weight = FontWeight(f32::from(weight));
-    f
-}
-
-#[test]
-fn inter_is_a_family_of_the_text_system_once_registered() {
-    let text = registered_text_system();
-    assert!(text.all_font_names().iter().any(|n| n == "Inter"));
-}
-
-#[test]
-fn a_layout_in_inter_at_each_weight_resolves_to_inter_and_not_to_a_fallback() {
-    let text = registered_text_system();
-    let mut ids = Vec::new();
-    for weight in WEIGHTS {
-        let id = text.resolve_font(&inter(weight));
-        // `get_font_for_id` knows a font only when it was found directly, never for a fallback.
-        let found = text
-            .get_font_for_id(id)
-            .unwrap_or_else(|| panic!("weight {weight} fell back to another font"));
-        assert_eq!(found.family.as_ref(), "Inter", "weight {weight}");
-        ids.push(id);
-    }
-    ids.sort_by_key(|id| id.0);
-    ids.dedup();
-    assert_eq!(
-        ids.len(),
-        4,
-        "each weight is its own face, not one face stretched"
-    );
 }

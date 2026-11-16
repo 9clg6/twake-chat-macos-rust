@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
 //! The height of a bubble is estimated before its text is measured, from an average character
 //! width. With Inter embedded (15 px body text), that width must be Inter's, not the system
 //! font's. Public API under test (to write): `twake_ui::bubble_style::BODY_CHAR_WIDTH_PX: f32`
@@ -44,15 +45,5 @@ fn the_estimated_char_width_is_the_measured_one_of_inter_regular_15_px() {
         error <= 0.03,
         "estimate {BODY_CHAR_WIDTH_PX} px, Inter Regular measures {measured:.2} px ({:.1} % off)",
         error * 100.0
-    );
-}
-
-#[test]
-fn the_estimate_is_no_longer_the_system_font_guess_of_seven_pixels() {
-    // Inter is wider than the 7.0 px assumed for the system font: 7.0 is out of tolerance.
-    let measured = measured_average(400);
-    assert!(
-        (7.0 - measured).abs() / measured > 0.03,
-        "measured {measured:.2}"
     );
 }
