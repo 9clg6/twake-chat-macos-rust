@@ -19,6 +19,14 @@ const OWN_TAIL: [bool; 9] = [true, true, false, true, false, false, true, true, 
 const MINUTE_MS: u64 = 60_000;
 const DAY_MS: u64 = 24 * 60 * MINUTE_MS;
 
+/// Scripts Inter does not draw (emoji, CJK) or draws with accents, in the newest messages of the big room.
+const SCRIPT_TAIL: [&str; 5] = [
+    "Bonjour 👋🎉 on déploie à 17 h ?",
+    "こんにちは 你好 안녕하세요",
+    "Привет, как дела? Всё хорошо, спасибо за ревью!",
+    "Éléphant à l'âme naïve, œuvre ça ñandú: Donaudampfschifffahrtsgesellschaftskapitän",
+    "こんにちは、今日のリリースについて確認させてください。你好，请确认今天的发布。안녕하세요, 오늘 릴리스를 확인해 주세요. 👨‍👩‍👧‍👦🚀",
+];
 const PEOPLE: [&str; 12] = [
     "Alice Martin",
     "Bob Durand",
@@ -153,11 +161,16 @@ fn history(
                 people[rng.below(people.len())].0.clone()
             };
         }
+        let generated = text(rng);
+        let body = match SCRIPT_TAIL.get(from_end) {
+            Some(script) if room == 0 => (*script).to_owned(),
+            _ => generated,
+        };
         let mut message = Message::remote(
             event_id(room, n),
             sender.clone(),
             Timestamp::from_millis(ts.min(now.as_millis())),
-            text(rng),
+            body,
         );
         if n > 5 && rng.below(40) == 0 {
             message = message.with_reply_to(event_id(room, n - 1 - rng.below(5)));
