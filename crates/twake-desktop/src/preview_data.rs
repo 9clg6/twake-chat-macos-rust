@@ -126,6 +126,14 @@ fn text(rng: &mut Rng) -> String {
     }
 }
 
+/// The generated text, or a script of `SCRIPT_TAIL` among the newest messages of the big room.
+fn body(room: usize, from_end: usize, generated: String) -> String {
+    match SCRIPT_TAIL.get(from_end) {
+        Some(script) if room == 0 => (*script).to_owned(),
+        _ => generated,
+    }
+}
+
 fn history(
     room: usize,
     count: usize,
@@ -161,11 +169,7 @@ fn history(
                 people[rng.below(people.len())].0.clone()
             };
         }
-        let generated = text(rng);
-        let body = match SCRIPT_TAIL.get(from_end) {
-            Some(script) if room == 0 => (*script).to_owned(),
-            _ => generated,
-        };
+        let body = body(room, from_end, text(rng));
         let mut message = Message::remote(
             event_id(room, n),
             sender.clone(),
