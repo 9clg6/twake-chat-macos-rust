@@ -17,13 +17,14 @@ twake-domain = { path = "../twake-domain" }
 futures = "0.3"
 rustls = { version = "0.23", default-features = false, features = ["aws_lc_rs"] }
 thiserror = "2.0.21"
-tokio = { version = "1", features = ["sync"] }
+tokio = { version = "1", features = ["sync", "rt", "time"] }
 
 [dev-dependencies]
 # `testing` brings MatrixMockServer (wiremock, matrix-sdk-test): an in-process mock homeserver, no network.
 matrix-sdk = { version = "=0.19.1", default-features = false, features = ["e2e-encryption", "automatic-room-key-forwarding", "sqlite", "rustls-aws-lc-rs", "testing"] }
 wiremock = { version = "0.6.5", default-features = false }
-tokio = { version = "1", features = ["macros", "rt", "time"] }
+tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "time"] }
 futures = "0.3"
 tempfile = "3"
+twake-testing = { path = "../twake-testing" }
 serde_json = "1"
