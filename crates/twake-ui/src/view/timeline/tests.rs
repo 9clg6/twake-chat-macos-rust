@@ -6,6 +6,7 @@ use twake_domain::EventId;
 use twake_ui_kit::theme::{ColorScheme, Theme};
 
 use super::{estimated_height, tick_text, wrap_lines};
+use crate::bubble_style::BODY_CHAR_WIDTH_PX;
 use crate::avatar::AvatarView;
 use crate::timeline_rows::{BubbleView, DayDividerView, QuoteView, RowView, Side, Ticks};
 
@@ -152,4 +153,14 @@ fn a_quote_in_a_bubble_adds_to_its_height() {
         height(quoting, 800.0) - height(bubble(Side::Other, "hi"), 800.0),
         40.0
     );
+}
+
+#[test]
+fn a_word_as_long_as_the_line_is_one_line_and_one_more_character_makes_two() {
+    // Column 300 px: own bubble max 201 px, minus 2 x 16 px of padding = 169 px of text, at the
+    // average width of Inter 15 px (`BODY_CHAR_WIDTH_PX`).
+    let per_line = (169.0 / BODY_CHAR_WIDTH_PX) as usize;
+    let one = height(bubble(Side::Own, &"a".repeat(per_line)), 300.0);
+    let two = height(bubble(Side::Own, &"a".repeat(per_line + 1)), 300.0);
+    assert_eq!(two - one, 20.0, "one more line of 20 px");
 }
