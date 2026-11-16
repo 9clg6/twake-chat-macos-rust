@@ -49,7 +49,7 @@ fn main() {
     twake_gpui::gpui_platform::application()
         .with_assets(IconAssets)
         .run(move |cx: &mut App| {
-            fonts::register(&cx.text_system()).expect("register the embedded Inter");
+            fonts::register(cx.text_system()).expect("register the embedded Inter");
             let (width, height) = if gallery { GALLERY_SIZE } else { WINDOW_SIZE };
             let bounds = Bounds::centered(None, size(px(width), px(height)), cx);
             let options = WindowOptions {
