@@ -34,7 +34,7 @@ pub async fn login_with_token(
     session_of(client).ok_or(LoginError::Server)
 }
 
-fn classify(error: &Error) -> LoginError {
+pub(crate) fn classify(error: &Error) -> LoginError {
     if let Some(api) = error.as_client_api_error() {
         return match error.client_api_error_kind() {
             _ if api.status_code.is_server_error() => LoginError::Server,
