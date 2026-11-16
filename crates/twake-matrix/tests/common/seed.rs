@@ -34,6 +34,8 @@ pub struct RoomSeed {
     prev_batch: Option<String>,
     avatar: Option<String>,
     bump: u64,
+    /// (user, event, receipt type) of the receipts extension.
+    receipts: Vec<(String, String, String)>,
 }
 
 impl RoomSeed {
@@ -49,7 +51,37 @@ impl RoomSeed {
             prev_batch: None,
             avatar: None,
             bump: 1,
+            receipts: vec![],
         }
+    }
+
+    /// A public read receipt (`m.read`) of `user` on `event`, in the receipts extension.
+    pub fn read_by(self, user: &str, event: &str) -> Self {
+        self.receipt(user, event, "m.read")
+    }
+
+    /// A private read receipt (`m.read.private`) of `user` on `event`.
+    pub fn privately_read_by(self, user: &str, event: &str) -> Self {
+        self.receipt(user, event, "m.read.private")
+    }
+
+    fn receipt(mut self, user: &str, event: &str, kind: &str) -> Self {
+        self.receipts
+            .push((user.to_string(), event.to_string(), kind.to_string()));
+        self
+    }
+
+    /// The `m.receipt` event of the room for the receipts extension; none without a receipt.
+    fn receipt_event(&self) -> Option<Value> {
+        if self.receipts.is_empty() {
+            return None;
+        }
+        let mut content = serde_json::Map::<String, Value>::new();
+        for (user, event, kind) in &self.receipts {
+            let by_kind = content.entry(event.clone()).or_insert_with(|| json!({}));
+            by_kind[kind.as_str()] = json!({ user: {"ts": 1_000} });
+        }
+        Some(json!({"type": "m.receipt", "content": content}))
     }
 
     pub fn named(mut self, name: &str) -> Self {
@@ -346,8 +378,12 @@ impl SlidingScript {
         if script.failing > 0 {
             script.failing -= 1;
             script.refused_at.push(std::time::Instant::now());
-            return ResponseTemplate::new(script.fail_status)
-                .set_body_json(json!({"errcode": "M_FORBIDDEN", "error": "scripted refusal"}));
+            let body = if script.fail_status == 401 {
+                json!({"errcode": "M_UNKNOWN_TOKEN", "error": "scripted refusal", "soft_logout": false})
+            } else {
+                json!({"errcode": "M_FORBIDDEN", "error": "scripted refusal"})
+            };
+            return ResponseTemplate::new(script.fail_status).set_body_json(body);
         }
         let (rooms, initial) = if !has_pos {
             (script.first.clone(), true)
@@ -359,11 +395,18 @@ impl SlidingScript {
         for room in &rooms {
             room_map.insert(room.id.clone(), room.json(initial));
         }
-        let ext = if has_pos {
+        let mut ext = if has_pos {
             json!({})
         } else {
             json!({"account_data": script.account_data.json()})
         };
+        let receipts: serde_json::Map<String, Value> = rooms
+            .iter()
+            .filter_map(|r| Some((r.id.clone(), r.receipt_event()?)))
+            .collect();
+        if !receipts.is_empty() {
+            ext["receipts"] = json!({ "rooms": receipts });
+        }
         let template = ResponseTemplate::new(200).set_body_json(json!({
             "txn_id": body["txn_id"],
             "pos": if has_pos { "2" } else { "1" },

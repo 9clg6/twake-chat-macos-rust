@@ -4,6 +4,7 @@ use matrix_sdk::deserialized_responses::{SyncOrStrippedState, TimelineEvent};
 use matrix_sdk::notification_settings::NotificationSettings;
 use matrix_sdk::ruma::MilliSecondsSinceUnixEpoch;
 use matrix_sdk::ruma::OwnedUserId;
+use matrix_sdk::ruma::events::receipt::{ReceiptThread, ReceiptType};
 use matrix_sdk::ruma::events::room::create::RoomCreateEventContent;
 use matrix_sdk::ruma::events::room::message::{MessageType, Relation};
 use matrix_sdk::ruma::events::space::parent::SpaceParentEventContent;
@@ -76,8 +77,10 @@ async fn display_name(room: &Room) -> String {
 
 /// No server counter: Synapse sends none with sliding sync, the client computes the counts
 /// from the events of the cache (domain `read_state`), and the account-data mark (D615).
-/// ponytail: main timeline only, no receipts, no threads, nobody ignored; the cache holds the
-/// recent events only, so the count caps at what it holds.
+/// The read point is the furthest of the last own message and the own `m.read` / `m.read.private`
+/// receipt (main timeline).
+/// ponytail: no threads, nobody ignored; the cache holds the recent events only, so the count
+/// caps at what it holds.
 async fn unread(ctx: &Ctx, room: &Room, muted: bool) -> UnreadCount {
     let marked_unread = room.is_marked_unread();
     let Some(me) = ctx.me.clone() else {
@@ -88,7 +91,7 @@ async fn unread(ctx: &Ctx, room: &Room, muted: bool) -> UnreadCount {
         };
     };
     let events = read_events(room, &me).await;
-    let read = ReadContext::new(me);
+    let read = ReadContext::new(me.clone()).with_receipts(own_receipts(room, &me).await);
     let state = RoomReadState {
         main: timeline_read_state(&events, &read),
         threads: vec![],
@@ -103,6 +106,26 @@ async fn unread(ctx: &Ctx, room: &Room, muted: bool) -> UnreadCount {
         marked_unread,
     };
     room_unread(&state, &flags)
+}
+
+/// The events the user's own receipts, public and private, point at.
+async fn own_receipts(room: &Room, me: &UserId) -> Vec<EventId> {
+    let Ok(me) = OwnedUserId::try_from(me.as_str()) else {
+        return vec![];
+    };
+    let mut events = vec![];
+    // Clients send their receipts unthreaded or on the `main` thread.
+    for kind in [ReceiptType::Read, ReceiptType::ReadPrivate] {
+        for thread in [ReceiptThread::Unthreaded, ReceiptThread::Main] {
+            let receipt = room.load_user_receipt(kind.clone(), &thread, &me).await;
+            if let Ok(Some((event, _))) = receipt
+                && let Ok(id) = EventId::parse(event.as_str())
+            {
+                events.push(id);
+            }
+        }
+    }
+    events
 }
 
 async fn read_events(room: &Room, me: &UserId) -> Vec<ReadEvent> {
