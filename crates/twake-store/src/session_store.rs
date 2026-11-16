@@ -59,7 +59,8 @@ impl KeychainSessionStore {
     }
 }
 
-impl Inner {    fn read(&self) -> Result<Vec<Session>, SessionStoreError> {
+impl Inner {
+    fn read(&self) -> Result<Vec<Session>, SessionStoreError> {
         match self.keychain.get(ENTRY)? {
             None => Ok(Vec::new()),
             Some(text) => decode(text.expose()),
