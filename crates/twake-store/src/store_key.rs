@@ -2,10 +2,12 @@
 //! CSPRNG as 64 lowercase hexadecimals, one per account, kept in the keychain.
 
 use std::fmt::Write;
+use std::sync::Arc;
 
 use twake_domain::UserId;
 use twake_domain::session::Secret;
 
+use crate::keychain::off_thread;
 use crate::{Keychain, KeychainError};
 
 const KEY_BYTES: usize = 32;
@@ -57,4 +59,24 @@ pub fn store_key_for(
 /// Removes the key of `user` (sign-out); a missing key is fine.
 pub fn forget_store_key(keychain: &dyn Keychain, user: &UserId) -> Result<(), KeychainError> {
     keychain.delete(&entry_name(user))
+}
+
+/// [`store_key_for`] on a thread of its own, with a key of the OS CSPRNG when there is none.
+pub async fn store_key_for_async(
+    keychain: Arc<dyn Keychain>,
+    user: UserId,
+) -> Result<Secret, KeychainError> {
+    off_thread(move || store_key_for(&*keychain, &user, generate_store_key))
+        .await
+        .unwrap_or_else(|| Err(KeychainError::default()))
+}
+
+/// [`forget_store_key`] on a thread of its own.
+pub async fn forget_store_key_async(
+    keychain: Arc<dyn Keychain>,
+    user: UserId,
+) -> Result<(), KeychainError> {
+    off_thread(move || forget_store_key(&*keychain, &user))
+        .await
+        .unwrap_or_else(|| Err(KeychainError::default()))
 }
