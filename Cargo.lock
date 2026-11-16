@@ -8059,6 +8059,7 @@ dependencies = [
 name = "twake-desktop"
 version = "0.1.0"
 dependencies = [
+ "futures",
  "tokio",
  "twake-app",
  "twake-calls",

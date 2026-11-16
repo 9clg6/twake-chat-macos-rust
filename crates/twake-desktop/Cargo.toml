@@ -8,6 +8,10 @@ publish.workspace = true
 [lints]
 workspace = true
 
+[lib]
+name = "twake_desktop"
+path = "src/lib.rs"
+
 [dependencies]
 twake-domain = { path = "../twake-domain" }
 twake-app = { path = "../twake-app" }
@@ -23,4 +27,5 @@ twake-icons = { path = "../twake-icons" }
 twake-gpui = { path = "../twake-gpui" }
 twake-ui-kit = { path = "../twake-ui-kit" }
 twake-ui = { path = "../twake-ui" }
-tokio = { version = "1", default-features = false, features = ["rt-multi-thread"] }
+futures = "0.3"
+tokio = { version = "1", default-features = false, features = ["rt-multi-thread", "sync"] }

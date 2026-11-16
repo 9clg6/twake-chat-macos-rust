@@ -71,6 +71,8 @@ pub enum LoginView {
         /// The account.
         user: UserId,
     },
+    /// The keychain cannot be read: not the same as no account (A005).
+    StoreUnavailable,
 }
 
 /// The sign-in screen: the session machine, whether the browser is open, the last problem.

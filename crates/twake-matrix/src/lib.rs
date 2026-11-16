@@ -1,6 +1,7 @@
 //! Adapter over matrix-sdk: sync, room list, timeline, crypto, store, SSO login.
 #![recursion_limit = "256"] // matrix-sdk futures overflow the default layout depth of 128
 
+mod account;
 mod client;
 mod login;
 pub mod map;
@@ -13,8 +14,10 @@ mod sync;
 mod timeline;
 mod view;
 
+pub use account::{check_session, login_client};
 pub use client::{ClientError, account_data_dir, build_client, install_tls_provider};
 pub use login::{LoginError, login_with_token};
+pub use matrix_sdk::Client;
 pub use restore::{RestoreError, restore_session};
 pub use room_list::MatrixRoomList;
 pub use sign_out::{Expiry, SignOutError, expiry, sign_out};
