@@ -131,18 +131,7 @@ impl LoginScreen {
             SessionState::SignedOut => LoginView::EnterServer { problem },
             SessionState::Discovering => LoginView::Discovering,
             SessionState::AwaitingLogin(homeserver) => {
-                let homeserver = homeserver.clone();
-                if self.browser_open {
-                    LoginView::WaitingForBrowser {
-                        homeserver,
-                        problem,
-                    }
-                } else {
-                    LoginView::ChooseSignIn {
-                        homeserver,
-                        problem,
-                    }
-                }
+                self.choice_view(homeserver.clone(), problem)
             }
             SessionState::LoggingIn(homeserver) => LoginView::SigningIn {
                 homeserver: homeserver.clone(),
