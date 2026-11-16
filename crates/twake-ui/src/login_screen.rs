@@ -47,6 +47,14 @@ pub struct LoginScreenView {
 }
 
 impl LoginScreenView {
+    fn problem(self, problem: Option<String>) -> Self {
+        Self { problem, ..self }
+    }
+
+    fn working(self) -> Self {
+        Self { busy: true, ..self }
+    }
+
     /// The screen of `view` in the language of `locale`.
     pub fn from(view: &LoginView, locale: &Locale) -> Self {
         let t = Texts(locale);
@@ -62,11 +70,7 @@ impl LoginScreenView {
                 problem,
             } => t.waiting(homeserver.as_str(), problem),
             LoginView::SigningIn { homeserver } => t.signing_in(homeserver.as_str()),
-            LoginView::SignedIn { user } => t.signed_in(user.as_str()),
-            LoginView::SessionExpired { user } => t.expired(user.as_str()),
-            LoginView::SigningOut { user } => t.signing_out(user.as_str()),
-            LoginView::SignOutFailed { user } => t.sign_out_failed(user.as_str()),
-            LoginView::StoreUnavailable => t.store_unavailable(),
+            account => t.account(account),
         }
     }
 }
@@ -75,6 +79,27 @@ impl LoginScreenView {
 struct Texts<'a>(&'a Locale);
 
 impl Texts<'_> {
+    /// The views of a signed-in account, and the unreadable keychain (the last arm).
+    fn account(&self, view: &LoginView) -> LoginScreenView {
+        match view {
+            LoginView::SignedIn { user } => self.with_button(
+                "signed-in",
+                user.as_str(),
+                "login-button-sign-out",
+                LoginAction::SignOut,
+            ),
+            LoginView::SessionExpired { user } => self.with_button(
+                "expired",
+                user.as_str(),
+                "login-button-add-again",
+                LoginAction::AddAgain,
+            ),
+            LoginView::SigningOut { user } => self.signing_out(user.as_str()),
+            LoginView::SignOutFailed { user } => self.sign_out_failed(user.as_str()),
+            _ => self.store_unavailable(),
+        }
+    }
+
     fn tr(&self, key: &str) -> String {
         self.0.tr(key, &[])
     }
@@ -141,55 +166,48 @@ impl Texts<'_> {
         }
     }
 
+    /// An account screen with one button.
+    fn with_button(
+        &self,
+        which: &str,
+        user: &str,
+        key: &str,
+        action: LoginAction,
+    ) -> LoginScreenView {
+        self.about(which, "user", user, vec![self.button(key, action)])
+    }
+
     fn choose(&self, server: &str, problem: &Option<LoginProblem>) -> LoginScreenView {
         let buttons = vec![
             self.button("login-button-open-browser", LoginAction::OpenBrowser),
             self.cancel(),
         ];
-        LoginScreenView {
-            problem: problem_text(problem, self.0),
-            ..self.about("choose", "server", server, buttons)
-        }
+        self.about("choose", "server", server, buttons)
+            .problem(problem_text(problem, self.0))
     }
 
     fn waiting(&self, server: &str, problem: &Option<LoginProblem>) -> LoginScreenView {
-        LoginScreenView {
-            problem: problem_text(problem, self.0),
-            busy: true,
-            ..self.about("waiting", "server", server, vec![self.cancel()])
-        }
+        self.about("waiting", "server", server, vec![self.cancel()])
+            .problem(problem_text(problem, self.0))
+            .working()
     }
 
     fn signing_in(&self, server: &str) -> LoginScreenView {
-        LoginScreenView {
-            busy: true,
-            ..self.about("signing-in", "server", server, vec![])
-        }
-    }
-
-    fn signed_in(&self, user: &str) -> LoginScreenView {
-        let sign_out = self.button("login-button-sign-out", LoginAction::SignOut);
-        self.about("signed-in", "user", user, vec![sign_out])
-    }
-
-    fn expired(&self, user: &str) -> LoginScreenView {
-        let again = self.button("login-button-add-again", LoginAction::AddAgain);
-        self.about("expired", "user", user, vec![again])
+        self.about("signing-in", "server", server, vec![]).working()
     }
 
     fn signing_out(&self, user: &str) -> LoginScreenView {
-        LoginScreenView {
-            busy: true,
-            ..self.about("signing-out", "user", user, vec![])
-        }
+        self.about("signing-out", "user", user, vec![]).working()
     }
 
     fn sign_out_failed(&self, user: &str) -> LoginScreenView {
-        let retry = self.button("login-button-retry", LoginAction::SignOut);
-        LoginScreenView {
-            problem: Some(self.tr("login-problem-sign-out-failed")),
-            ..self.about("sign-out-failed", "user", user, vec![retry])
-        }
+        self.with_button(
+            "sign-out-failed",
+            user,
+            "login-button-retry",
+            LoginAction::SignOut,
+        )
+        .problem(Some(self.tr("login-problem-sign-out-failed")))
     }
 
     fn store_unavailable(&self) -> LoginScreenView {
