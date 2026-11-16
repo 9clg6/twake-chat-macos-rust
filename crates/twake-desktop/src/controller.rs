@@ -48,20 +48,29 @@ pub async fn run(mut boot: Boot, mut commands: Receiver<Command>, shown: watch::
 
 async fn handle(boot: &mut Boot, command: Command) {
     match command {
-        Command::Server(text) => {
-            boot.apply(SessionEvent::ServerEntered);
-            boot.apply(match HomeserverUrl::parse(text.trim()) {
-                Ok(url) => SessionEvent::HomeserverResolved(url),
-                Err(_) => SessionEvent::DiscoveryFailed,
-            });
-        }
+        Command::Server(text) => enter_server(boot, text.trim()),
         Command::Token(token) => boot.sso_callback(token).await,
-        Command::Action(LoginAction::Cancel) => boot.apply(SessionEvent::Cancelled),
-        Command::Action(LoginAction::SignOut) => sign_out(boot).await,
-        Command::Action(LoginAction::AddAgain) => boot.add_again(),
-        Command::Action(LoginAction::RetryStart) => boot.start().await,
+        Command::Action(action) => act(boot, action).await,
+    }
+}
+
+/// ponytail: the address typed is the homeserver, no `.well-known` lookup yet (A034).
+fn enter_server(boot: &mut Boot, text: &str) {
+    boot.apply(SessionEvent::ServerEntered);
+    boot.apply(match HomeserverUrl::parse(text) {
+        Ok(url) => SessionEvent::HomeserverResolved(url),
+        Err(_) => SessionEvent::DiscoveryFailed,
+    });
+}
+
+async fn act(boot: &mut Boot, action: LoginAction) {
+    match action {
+        LoginAction::Cancel => boot.apply(SessionEvent::Cancelled),
+        LoginAction::SignOut => sign_out(boot).await,
+        LoginAction::AddAgain => boot.add_again(),
+        LoginAction::RetryStart => boot.start().await,
         // The screen turns these two into `Server` and the browser; nothing to do here.
-        Command::Action(LoginAction::SubmitServer | LoginAction::OpenBrowser) => {}
+        LoginAction::SubmitServer | LoginAction::OpenBrowser => {}
     }
 }
 

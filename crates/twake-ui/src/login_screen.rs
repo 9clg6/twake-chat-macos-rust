@@ -123,17 +123,32 @@ impl Texts<'_> {
         }
     }
 
+    /// A screen that names the server or the account: keys `login-title-{which}` and
+    /// `login-message-{which}`.
+    fn about(
+        &self,
+        which: &str,
+        name: &str,
+        value: &str,
+        buttons: Vec<LoginButton>,
+    ) -> LoginScreenView {
+        LoginScreenView {
+            buttons,
+            ..self.screen(
+                &format!("login-title-{which}"),
+                Some(self.named(&format!("login-message-{which}"), name, value)),
+            )
+        }
+    }
+
     fn choose(&self, server: &str, problem: &Option<LoginProblem>) -> LoginScreenView {
+        let buttons = vec![
+            self.button("login-button-open-browser", LoginAction::OpenBrowser),
+            self.cancel(),
+        ];
         LoginScreenView {
             problem: problem_text(problem, self.0),
-            buttons: vec![
-                self.button("login-button-open-browser", LoginAction::OpenBrowser),
-                self.cancel(),
-            ],
-            ..self.screen(
-                "login-title-choose",
-                Some(self.named("login-message-choose", "server", server)),
-            )
+            ..self.about("choose", "server", server, buttons)
         }
     }
 
@@ -141,62 +156,39 @@ impl Texts<'_> {
         LoginScreenView {
             problem: problem_text(problem, self.0),
             busy: true,
-            buttons: vec![self.cancel()],
-            ..self.screen(
-                "login-title-waiting",
-                Some(self.named("login-message-waiting", "server", server)),
-            )
+            ..self.about("waiting", "server", server, vec![self.cancel()])
         }
     }
 
     fn signing_in(&self, server: &str) -> LoginScreenView {
         LoginScreenView {
             busy: true,
-            ..self.screen(
-                "login-title-signing-in",
-                Some(self.named("login-message-signing-in", "server", server)),
-            )
+            ..self.about("signing-in", "server", server, vec![])
         }
     }
 
     fn signed_in(&self, user: &str) -> LoginScreenView {
-        LoginScreenView {
-            buttons: vec![self.button("login-button-sign-out", LoginAction::SignOut)],
-            ..self.screen(
-                "login-title-signed-in",
-                Some(self.named("login-message-signed-in", "user", user)),
-            )
-        }
+        let sign_out = self.button("login-button-sign-out", LoginAction::SignOut);
+        self.about("signed-in", "user", user, vec![sign_out])
     }
 
     fn expired(&self, user: &str) -> LoginScreenView {
-        LoginScreenView {
-            buttons: vec![self.button("login-button-add-again", LoginAction::AddAgain)],
-            ..self.screen(
-                "login-title-expired",
-                Some(self.named("login-message-expired", "user", user)),
-            )
-        }
+        let again = self.button("login-button-add-again", LoginAction::AddAgain);
+        self.about("expired", "user", user, vec![again])
     }
 
     fn signing_out(&self, user: &str) -> LoginScreenView {
         LoginScreenView {
             busy: true,
-            ..self.screen(
-                "login-title-signing-out",
-                Some(self.named("login-message-signing-out", "user", user)),
-            )
+            ..self.about("signing-out", "user", user, vec![])
         }
     }
 
     fn sign_out_failed(&self, user: &str) -> LoginScreenView {
+        let retry = self.button("login-button-retry", LoginAction::SignOut);
         LoginScreenView {
             problem: Some(self.tr("login-problem-sign-out-failed")),
-            buttons: vec![self.button("login-button-retry", LoginAction::SignOut)],
-            ..self.screen(
-                "login-title-sign-out-failed",
-                Some(self.named("login-message-sign-out-failed", "user", user)),
-            )
+            ..self.about("sign-out-failed", "user", user, vec![retry])
         }
     }
 
