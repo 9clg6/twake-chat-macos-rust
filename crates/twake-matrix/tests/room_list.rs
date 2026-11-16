@@ -183,6 +183,16 @@ fn seed_of(summary: &RoomSummary) -> RoomSeed {
     if let Some(name) = name {
         seed = seed.with_member(sender, name);
     }
+    // The adapter counts the messages of others after the read point (the last own message):
+    // one more of them than the count says, the last, is the preview.
+    for i in 1..summary.unread.unread {
+        seed = seed.with_message(text_event(
+            &format!("$earlier{i}"),
+            sender,
+            summary.last_activity.as_millis() - u64::from(i),
+            "earlier",
+        ));
+    }
     match &summary.last_message_preview {
         Some(text) => seed.with_message(text_event(
             "$last",
@@ -258,26 +268,182 @@ async fn a_room_without_a_message_is_dated_by_its_creation() {
     assert_eq!(room.last_sender, None);
 }
 
-/// A031 / D60 / AGENTS.md "Unread": Synapse sends no counters with sliding sync, the client
-/// computes them (domain `read_state`, timeline and receipts). The room list gives no count of
-/// its own: a row starts at zero whatever counters a server happens to send.
+// ------------------------------------------------------------ unread counts (wiring lot)
+//
+// A031 D60 left the counts at zero: "nothing calls `twake_domain::read_state::room_unread` yet".
+// Need (AGENTS.md of the React app, "Unread"): Synapse sends no counters with sliding sync, the
+// client computes them from the timeline and the receipts, with the domain `read_state`
+// (the read point is the user's last own message or a receipt; only messages of others count;
+// a muted room counts nothing; the mark shows only when no count does). A counter the server
+// sends is never used. The old spec of this file ("a row carries no count") is replaced.
+
+fn counts(unread: u32, mentions: u32) -> UnreadCount {
+    UnreadCount {
+        unread,
+        mentions,
+        marked_unread: false,
+    }
+}
+
+const BOB: &str = "@bob:example.org";
+const ALICE: &str = "@alice:example.org";
+
+fn mentioning_alice(mut event: serde_json::Value) -> serde_json::Value {
+    event["content"]["m.mentions"] = json!({"user_ids": [ALICE]});
+    event
+}
+
 #[tokio::test]
-async fn a_row_carries_no_count_of_the_server() {
+async fn a_room_where_nothing_was_read_counts_the_messages_of_others() {
     let rooms = vec![
         RoomSeed::new("!group:example.org")
             .named("Team")
-            .unread(3, 1)
-            .with_message(text_event("$g1", "@bob:example.org", 5_000, "see you at 5")),
+            .with_message(text_event("$1", BOB, 1_000, "one"))
+            .with_message(text_event("$2", BOB, 2_000, "two"))
+            .with_message(text_event("$3", BOB, 3_000, "three")),
     ];
     let list = first_list(&serve(rooms, AccountData::default()).await).await;
+    assert_eq!(find(&list, "!group:example.org").unread, counts(3, 0));
+}
+
+#[tokio::test]
+async fn the_count_ignores_what_the_server_says() {
+    // The server claims 9 notifications and 4 highlights; the timeline holds one message.
+    let rooms = vec![
+        RoomSeed::new("!group:example.org")
+            .named("Team")
+            .unread(9, 4)
+            .with_message(text_event("$1", BOB, 1_000, "one")),
+    ];
+    let list = first_list(&serve(rooms, AccountData::default()).await).await;
+    assert_eq!(find(&list, "!group:example.org").unread, counts(1, 0));
+}
+
+#[tokio::test]
+async fn an_own_message_is_the_read_point() {
+    let rooms = vec![
+        RoomSeed::new("!a:example.org")
+            .named("Answered")
+            .with_message(text_event("$1", BOB, 1_000, "one"))
+            .with_message(text_event("$2", ALICE, 2_000, "mine")),
+        RoomSeed::new("!b:example.org")
+            .named("Answered then more")
+            .with_message(text_event("$3", BOB, 1_000, "one"))
+            .with_message(text_event("$4", ALICE, 2_000, "mine"))
+            .with_message(text_event("$5", BOB, 3_000, "after")),
+    ];
+    let list = first_list(&serve(rooms, AccountData::default()).await).await;
+    assert_eq!(find(&list, "!a:example.org").unread, counts(0, 0));
+    assert_eq!(find(&list, "!b:example.org").unread, counts(1, 0));
+}
+
+#[tokio::test]
+async fn a_message_that_mentions_the_user_is_a_mention_and_an_unread() {
+    let rooms = vec![
+        RoomSeed::new("!group:example.org")
+            .named("Team")
+            .with_message(text_event("$1", BOB, 1_000, "hello"))
+            .with_message(mentioning_alice(text_event(
+                "$2",
+                BOB,
+                2_000,
+                "@alice look",
+            ))),
+    ];
+    let list = first_list(&serve(rooms, AccountData::default()).await).await;
+    assert_eq!(find(&list, "!group:example.org").unread, counts(2, 1));
+}
+
+#[tokio::test]
+async fn an_edit_is_not_a_new_unread_message() {
+    let rooms = vec![
+        RoomSeed::new("!group:example.org")
+            .named("Team")
+            .with_message(text_event("$1", BOB, 1_000, "one"))
+            .with_message(common::seed::edit_event(
+                "$2",
+                BOB,
+                2_000,
+                "$1",
+                "one, fixed",
+            )),
+    ];
+    let list = first_list(&serve(rooms, AccountData::default()).await).await;
+    assert_eq!(find(&list, "!group:example.org").unread, counts(1, 0));
+}
+
+#[tokio::test]
+async fn a_muted_room_counts_nothing_whatever_it_holds() {
+    let rooms = vec![
+        RoomSeed::new("!quiet:example.org")
+            .named("Quiet")
+            .with_message(mentioning_alice(text_event(
+                "$1",
+                BOB,
+                1_000,
+                "@alice ping",
+            ))),
+    ];
+    let data = AccountData::default().muting("!quiet:example.org");
+    let list = first_list(&serve(rooms, data).await).await;
+    assert_eq!(find(&list, "!quiet:example.org").unread, counts(0, 0));
+}
+
+#[tokio::test]
+async fn the_hand_mark_shows_only_where_no_count_does() {
+    let rooms = vec![
+        RoomSeed::new("!with:example.org")
+            .named("With messages")
+            .with_message(text_event("$1", BOB, 1_000, "one")),
+        RoomSeed::new("!without:example.org").named("Without"),
+    ];
+    let data = AccountData::default()
+        .marking_unread("!with:example.org")
+        .marking_unread("!without:example.org");
+    let list = first_list(&serve(rooms, data).await).await;
+    assert_eq!(find(&list, "!with:example.org").unread, counts(1, 0));
     assert_eq!(
-        find(&list, "!group:example.org").unread,
+        find(&list, "!without:example.org").unread,
         UnreadCount {
             unread: 0,
             mentions: 0,
-            marked_unread: false
+            marked_unread: true
         }
     );
+}
+
+#[tokio::test]
+async fn a_live_message_raises_the_count_and_an_own_one_resets_it() {
+    let rooms = vec![
+        RoomSeed::new("!group:example.org")
+            .named("Team")
+            .with_message(text_event("$1", BOB, 1_000, "one")),
+    ];
+    let served = serve(rooms, AccountData::default()).await;
+    let mut stream = served.subscribe().await.unwrap();
+    let mut list = match next_batch(&mut stream).await.as_slice() {
+        [RoomListDiff::Reset(rooms)] => rooms.clone(),
+        other => panic!("the first batch must be one Reset, got {other:?}"),
+    };
+    assert_eq!(find(&list, "!group:example.org").unread, counts(1, 0));
+
+    served.script.push(vec![
+        RoomSeed::new("!group:example.org").with_message(text_event("$2", BOB, 2_000, "two")),
+    ]);
+    while find(&list, "!group:example.org").unread != counts(2, 0) {
+        for diff in next_batch(&mut stream).await {
+            list = apply_diff(&list, diff);
+        }
+    }
+
+    served.script.push(vec![
+        RoomSeed::new("!group:example.org").with_message(text_event("$3", ALICE, 3_000, "mine")),
+    ]);
+    while find(&list, "!group:example.org").unread != counts(0, 0) {
+        for diff in next_batch(&mut stream).await {
+            list = apply_diff(&list, diff);
+        }
+    }
 }
 
 /// D615: a room the user marked unread by hand shows as unread with no count.

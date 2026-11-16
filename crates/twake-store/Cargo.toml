@@ -28,3 +28,4 @@ zbus-secret-service-keyring-store = { version = "1.0.1", features = ["rt-tokio-c
 [dev-dependencies]
 twake-testing = { path = "../twake-testing" }
 uuid = { version = "1", features = ["v4"] }
+tokio = { version = "1", features = ["macros", "rt"] }

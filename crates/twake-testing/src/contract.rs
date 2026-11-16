@@ -16,6 +16,7 @@ use futures::StreamExt;
 use futures::executor::block_on;
 use futures::stream::BoxStream;
 use twake_app::ports::{RoomListPort, TIMELINE_PAGE_SIZE, TimelineError, TimelinePort};
+use twake_domain::read_state::UnreadCount;
 use twake_domain::room_list::{LastSender, RoomKind, RoomListDiff, RoomSummary};
 use twake_domain::timeline::{Message, SendState, TimelineDiff};
 use twake_domain::{EventId, RoomId, Timestamp, UserId};
@@ -61,6 +62,13 @@ fn seed_room(n: usize) -> RoomSummary {
         .with_last_message_preview(format!("preview {n}"))
         // A real server always knows who wrote the last event: the seed says so too.
         .with_last_sender(LastSender::Other("Contract sender".into()))
+        // The last message is another's and nothing was read: the unread count is the client's
+        // own (AGENTS.md "Unread"), so a seed that says 0 here would contradict its own timeline.
+        .with_unread(UnreadCount {
+            unread: 1,
+            mentions: 0,
+            marked_unread: false,
+        })
 }
 
 fn by_id(mut rooms: Vec<RoomSummary>) -> Vec<RoomSummary> {

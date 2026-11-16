@@ -18,4 +18,5 @@ pub use login::{LoginError, login_with_token};
 pub use restore::{RestoreError, restore_session};
 pub use room_list::MatrixRoomList;
 pub use sign_out::{Expiry, SignOutError, expiry, sign_out};
+pub use sync::Backoff;
 pub use timeline::MatrixTimeline;

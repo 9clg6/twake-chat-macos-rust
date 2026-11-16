@@ -20,3 +20,16 @@ pub trait Keychain: Send + Sync {
     /// Removes `entry`; a missing entry is fine.
     fn delete(&self, entry: &str) -> Result<(), KeychainError>;
 }
+
+/// Runs `work` on a thread of its own, when the future is first polled (not when it is built),
+/// whatever executor polls it. None if `work` panicked.
+/// ponytail: a thread per call, the keychain is touched rarely; a pool if that changes.
+pub(crate) async fn off_thread<T: Send + 'static>(
+    work: impl FnOnce() -> T + Send + 'static,
+) -> Option<T> {
+    let (tx, rx) = futures::channel::oneshot::channel();
+    std::thread::spawn(move || {
+        let _ = tx.send(work());
+    });
+    rx.await.ok()
+}

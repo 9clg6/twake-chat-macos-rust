@@ -20,6 +20,9 @@ pub enum SessionState {
     Expired(Session),
     /// Logout in flight.
     SigningOut(Session),
+    /// The data of the account could not be erased: its device and keys are still on the disk.
+    /// A new `SignOut` asks again; nobody signs in over it.
+    SignOutFailed(Session),
 }
 
 /// What happened. An event not listed for the state is ignored.
@@ -49,6 +52,8 @@ pub enum SessionEvent {
     SignOut,
     /// `SigningOut` to `SignedOut`, also when the server could not be reached.
     SignOutDone,
+    /// `SigningOut` to `SignOutFailed`: the erase failed.
+    SignOutFailed,
 }
 
 /// The state of the session and the device it used last.
@@ -73,7 +78,7 @@ fn step(state: &SessionState, event: SessionEvent) -> Option<SessionState> {
         S::LoggingIn(h) => logging_in(h, event),
         S::Active(s) => active(s, event),
         S::Expired(_) => expired(event),
-        S::SigningOut(_) => (event == SessionEvent::SignOutDone).then_some(S::SignedOut),
+        S::SigningOut(s) | S::SignOutFailed(s) => signing_out(state, s, event),
     }
 }
 
@@ -117,6 +122,20 @@ fn active(session: &Session, event: SessionEvent) -> Option<SessionState> {
     match event {
         SessionEvent::Unauthorized401 => Some(SessionState::Expired(session.clone())),
         SessionEvent::SignOut => Some(SessionState::SigningOut(session.clone())),
+        _ => None,
+    }
+}
+
+fn signing_out(
+    state: &SessionState,
+    session: &Session,
+    event: SessionEvent,
+) -> Option<SessionState> {
+    use SessionState as S;
+    match (state, event) {
+        (S::SigningOut(_), SessionEvent::SignOutDone) => Some(S::SignedOut),
+        (S::SigningOut(_), SessionEvent::SignOutFailed) => Some(S::SignOutFailed(session.clone())),
+        (S::SignOutFailed(_), SessionEvent::SignOut) => Some(S::SigningOut(session.clone())),
         _ => None,
     }
 }

@@ -5,13 +5,12 @@
 
 use std::sync::{Arc, Mutex};
 
-use futures::FutureExt;
 use futures::future::BoxFuture;
 use twake_app::ports::{MAX_ACCOUNTS, SessionStoreError, SessionStorePort};
 use twake_domain::UserId;
 use twake_domain::session::{DeviceId, HomeserverUrl, Secret, Session};
 
-use crate::keychain::{Keychain, KeychainError};
+use crate::keychain::{Keychain, KeychainError, off_thread};
 
 const ENTRY: &str = "sessions";
 
@@ -21,8 +20,13 @@ impl From<KeychainError> for SessionStoreError {
     }
 }
 
-/// The sessions of the signed-in accounts, kept in the OS keychain.
+/// The sessions of the signed-in accounts, kept in the OS keychain. Every call of the keychain
+/// runs on a blocking thread, once the future is awaited (never on the UI thread).
 pub struct KeychainSessionStore {
+    inner: Arc<Inner>,
+}
+
+struct Inner {
     keychain: Arc<dyn Keychain>,
     /// Read-modify-write of the one entry is not interleaved.
     lock: Mutex<()>,
@@ -32,11 +36,30 @@ impl KeychainSessionStore {
     /// A store over `keychain`.
     pub fn new(keychain: Arc<dyn Keychain>) -> Self {
         Self {
-            keychain,
-            lock: Mutex::new(()),
+            inner: Arc::new(Inner {
+                keychain,
+                lock: Mutex::new(()),
+            }),
         }
     }
 
+    /// Runs `action` on a thread of its own; a panic of the backend is an unavailable store.
+    fn run<T: Send + 'static>(
+        &self,
+        action: impl FnOnce(&Inner) -> Result<T, SessionStoreError> + Send + 'static,
+    ) -> BoxFuture<'_, Result<T, SessionStoreError>> {
+        let inner = Arc::clone(&self.inner);
+        Box::pin(async move {
+            let done = off_thread(move || {
+                let _guard = inner.lock.lock().unwrap_or_else(|p| p.into_inner());
+                action(&inner)
+            });
+            done.await.unwrap_or(Err(SessionStoreError::Unavailable))
+        })
+    }
+}
+
+impl Inner {
     fn read(&self) -> Result<Vec<Session>, SessionStoreError> {
         match self.keychain.get(ENTRY)? {
             None => Ok(Vec::new()),
@@ -46,14 +69,6 @@ impl KeychainSessionStore {
 
     fn write(&self, sessions: &[Session]) -> Result<(), SessionStoreError> {
         Ok(self.keychain.set(ENTRY, &encode(sessions))?)
-    }
-
-    fn run<T: Send + 'static>(
-        &self,
-        action: impl FnOnce(&Self) -> Result<T, SessionStoreError>,
-    ) -> BoxFuture<'_, Result<T, SessionStoreError>> {
-        let _guard = self.lock.lock().unwrap_or_else(|p| p.into_inner());
-        std::future::ready(action(self)).boxed()
     }
 }
 
@@ -98,7 +113,7 @@ fn decode_line(line: &str) -> Option<Session> {
 
 impl SessionStorePort for KeychainSessionStore {
     fn save(&self, session: Session) -> BoxFuture<'_, Result<(), SessionStoreError>> {
-        self.run(|store| {
+        self.run(move |store| {
             if !holdable(session.access_token.expose()) {
                 return Err(SessionStoreError::Unavailable);
             }
@@ -115,15 +130,15 @@ impl SessionStorePort for KeychainSessionStore {
     }
 
     fn load(&self, user: UserId) -> BoxFuture<'_, Result<Option<Session>, SessionStoreError>> {
-        self.run(|store| Ok(store.read()?.into_iter().find(|s| s.user_id == user)))
+        self.run(move |store| Ok(store.read()?.into_iter().find(|s| s.user_id == user)))
     }
 
     fn list(&self) -> BoxFuture<'_, Result<Vec<Session>, SessionStoreError>> {
-        self.run(Self::read)
+        self.run(Inner::read)
     }
 
     fn clear(&self, user: UserId) -> BoxFuture<'_, Result<(), SessionStoreError>> {
-        self.run(|store| {
+        self.run(move |store| {
             let mut sessions = store.read()?;
             sessions.retain(|s| s.user_id != user);
             store.write(&sessions)

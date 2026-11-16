@@ -17,7 +17,7 @@ use twake_domain::RoomId;
 use twake_domain::room_list::{RoomListDiff, RoomSummary};
 
 use crate::summary::{Ctx, has_message, summarise};
-use crate::sync::{Running, Syncer, service_error};
+use crate::sync::{Backoff, Running, Syncer, service_error};
 
 /// The rooms of the account, read from the sliding sync room list.
 pub struct MatrixRoomList {
@@ -27,8 +27,13 @@ pub struct MatrixRoomList {
 impl MatrixRoomList {
     /// An adapter over `client`; the sync starts at the first `subscribe`.
     pub fn new(client: Client) -> Self {
+        Self::with_backoff(client, Backoff::default())
+    }
+
+    /// As `new`, with the waits between two restarts of the sync after an error.
+    pub fn with_backoff(client: Client, backoff: Backoff) -> Self {
         Self {
-            sync: Syncer::new(client),
+            sync: Syncer::with_backoff(client, backoff),
         }
     }
 }
