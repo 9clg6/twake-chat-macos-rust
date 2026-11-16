@@ -2,6 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
+use matrix_sdk::sliding_sync::VersionBuilder;
 use matrix_sdk::{Client, SqliteStoreConfig};
 use twake_domain::UserId;
 use twake_domain::session::{HomeserverUrl, Secret};
@@ -50,6 +51,9 @@ pub async fn build_client(
     std::fs::create_dir_all(dir).map_err(|_| ClientError::StoreUnavailable)?;
     Client::builder()
         .homeserver_url(homeserver.as_str())
+        .sliding_sync_version_builder(VersionBuilder::Native)
+        // ponytail: 3 retries, not the SDK's unbounded default: a server in error must end a call.
+        .request_config(matrix_sdk::config::RequestConfig::short_retry())
         .sqlite_store_with_config_and_cache_path(
             SqliteStoreConfig::new(dir).key(Some(&key)),
             None::<&Path>,
