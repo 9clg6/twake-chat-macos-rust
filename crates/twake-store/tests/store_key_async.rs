@@ -12,6 +12,7 @@
 //!       -> Result<Secret, KeychainError>` (a missing key is made with the CSPRNG of the OS);
 //! - `async fn forget_store_key_async(keychain: Arc<dyn Keychain>, user: UserId)
 //!       -> Result<(), KeychainError>`.
+//!
 //! `KeychainSessionStore` keeps its API (`SessionStorePort`).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
 
@@ -21,7 +22,9 @@ use std::thread::{self, ThreadId};
 use keyring_core::{CredentialStore, mock};
 use twake_domain::UserId;
 use twake_domain::session::Secret;
-use twake_store::{Keychain, KeychainError, OsKeychain, forget_store_key_async, store_key_for_async};
+use twake_store::{
+    Keychain, KeychainError, OsKeychain, forget_store_key_async, store_key_for_async,
+};
 
 /// A keychain over the in-memory store that writes down the thread of every call.
 struct Spy {
@@ -36,6 +39,7 @@ impl Spy {
     }
 
     /// A keychain whose every call panics, as a broken backend may.
+    #[allow(dead_code)]
     fn panicking() -> Arc<Self> {
         Self::build(true)
     }
@@ -92,7 +96,9 @@ fn off_this_thread(spy: &Spy) {
 #[tokio::test(flavor = "current_thread")]
 async fn the_store_key_is_made_and_read_off_the_calling_thread() {
     let spy = Spy::new();
-    let made = store_key_for_async(spy.clone(), user("alice")).await.unwrap();
+    let made = store_key_for_async(spy.clone(), user("alice"))
+        .await
+        .unwrap();
     assert!(
         made.expose().len() == 64
             && made
@@ -107,8 +113,12 @@ async fn the_store_key_is_made_and_read_off_the_calling_thread() {
 #[tokio::test(flavor = "current_thread")]
 async fn the_store_key_is_made_once_and_kept_under_the_entry_of_the_account() {
     let spy = Spy::new();
-    let first = store_key_for_async(spy.clone(), user("alice")).await.unwrap();
-    let again = store_key_for_async(spy.clone(), user("alice")).await.unwrap();
+    let first = store_key_for_async(spy.clone(), user("alice"))
+        .await
+        .unwrap();
+    let again = store_key_for_async(spy.clone(), user("alice"))
+        .await
+        .unwrap();
     assert_eq!(first, again, "a new key would orphan the encrypted store");
     assert_eq!(
         spy.get("store-key:@alice:example.org").unwrap(),
@@ -122,9 +132,13 @@ async fn the_store_key_is_made_once_and_kept_under_the_entry_of_the_account() {
 #[tokio::test(flavor = "current_thread")]
 async fn forgetting_the_store_key_runs_off_the_calling_thread_and_removes_it() {
     let spy = Spy::new();
-    store_key_for_async(spy.clone(), user("alice")).await.unwrap();
+    store_key_for_async(spy.clone(), user("alice"))
+        .await
+        .unwrap();
     let before = spy.threads().len();
-    forget_store_key_async(spy.clone(), user("alice")).await.unwrap();
+    forget_store_key_async(spy.clone(), user("alice"))
+        .await
+        .unwrap();
     let after = spy.threads();
     assert!(after.len() > before, "the delete reached the keychain");
     assert!(after[before..].iter().all(|t| *t != thread::current().id()));
@@ -136,7 +150,11 @@ async fn a_stored_key_that_is_not_valid_is_still_an_error_never_replaced() {
     let spy = Spy::new();
     spy.set("store-key:@alice:example.org", &Secret::new("not-a-key"))
         .unwrap();
-    assert!(store_key_for_async(spy.clone(), user("alice")).await.is_err());
+    assert!(
+        store_key_for_async(spy.clone(), user("alice"))
+            .await
+            .is_err()
+    );
     assert_eq!(
         spy.get("store-key:@alice:example.org").unwrap(),
         Some(Secret::new("not-a-key"))

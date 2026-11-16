@@ -12,6 +12,7 @@
 //!       -> Result<Secret, KeychainError>` (a missing key is made with the CSPRNG of the OS);
 //! - `async fn forget_store_key_async(keychain: Arc<dyn Keychain>, user: UserId)
 //!       -> Result<(), KeychainError>`.
+//!
 //! `KeychainSessionStore` keeps its API (`SessionStorePort`).
 #![allow(clippy::unwrap_used, clippy::expect_used, clippy::panic, missing_docs)]
 

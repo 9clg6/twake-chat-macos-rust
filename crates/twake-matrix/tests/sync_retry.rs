@@ -53,7 +53,10 @@ async fn until(
 #[tokio::test]
 async fn the_list_keeps_updating_after_the_server_refused_the_sync_a_few_times() {
     let server = MatrixMockServer::new().await;
-    let script = SlidingScript::new(vec![room("!a:example.org", "Alpha")], AccountData::default());
+    let script = SlidingScript::new(
+        vec![room("!a:example.org", "Alpha")],
+        AccountData::default(),
+    );
     script.mount(&server).await;
     let dir = tempfile::tempdir().unwrap();
     let port = MatrixRoomList::new(signed_in(&server, dir.path(), &alice()).await);
@@ -70,7 +73,10 @@ async fn the_list_keeps_updating_after_the_server_refused_the_sync_a_few_times()
     script.later(vec![room("!b:example.org", "Beta")]);
 
     assert!(
-        until(&mut stream, &mut list, |l| l.iter().any(|r| r.name == "Beta")).await,
+        until(&mut stream, &mut list, |l| l
+            .iter()
+            .any(|r| r.name == "Beta"))
+        .await,
         "a room created after the outage must reach the same stream; got {list:?}"
     );
 }

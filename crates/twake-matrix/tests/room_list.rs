@@ -333,7 +333,12 @@ async fn a_message_that_mentions_the_user_is_a_mention_and_an_unread() {
         RoomSeed::new("!group:example.org")
             .named("Team")
             .with_message(text_event("$1", BOB, 1_000, "hello"))
-            .with_message(mentioning_alice(text_event("$2", BOB, 2_000, "@alice look"))),
+            .with_message(mentioning_alice(text_event(
+                "$2",
+                BOB,
+                2_000,
+                "@alice look",
+            ))),
     ];
     let list = first_list(&serve(rooms, AccountData::default()).await).await;
     assert_eq!(find(&list, "!group:example.org").unread, counts(2, 1));
@@ -345,7 +350,13 @@ async fn an_edit_is_not_a_new_unread_message() {
         RoomSeed::new("!group:example.org")
             .named("Team")
             .with_message(text_event("$1", BOB, 1_000, "one"))
-            .with_message(common::seed::edit_event("$2", BOB, 2_000, "$1", "one, fixed")),
+            .with_message(common::seed::edit_event(
+                "$2",
+                BOB,
+                2_000,
+                "$1",
+                "one, fixed",
+            )),
     ];
     let list = first_list(&serve(rooms, AccountData::default()).await).await;
     assert_eq!(find(&list, "!group:example.org").unread, counts(1, 0));
@@ -356,7 +367,12 @@ async fn a_muted_room_counts_nothing_whatever_it_holds() {
     let rooms = vec![
         RoomSeed::new("!quiet:example.org")
             .named("Quiet")
-            .with_message(mentioning_alice(text_event("$1", BOB, 1_000, "@alice ping"))),
+            .with_message(mentioning_alice(text_event(
+                "$1",
+                BOB,
+                1_000,
+                "@alice ping",
+            ))),
     ];
     let data = AccountData::default().muting("!quiet:example.org");
     let list = first_list(&serve(rooms, data).await).await;
