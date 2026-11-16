@@ -1,0 +1,6 @@
+# Suppressions only shrink. Each entry says what, where and why.
+
+[[lint]]
+rule = "missing_docs"
+file = "crates/twake-tokens/src/generated.rs"
+reason = "generated file (#![allow(missing_docs)] emitted by xtask tokens); the constants are named after tokens.json keys"

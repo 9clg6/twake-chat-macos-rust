@@ -1,0 +1,45 @@
+# Infra-visible behaviours
+
+Part of [feature-inventory.md](../feature-inventory.md). Final behaviour per decision (Dnn of the React repo `DECISION.md`); later decisions override earlier ones. `modified by` = later entries that replace, update, complete or narrow this one (read them together; the latest wins). Entries with `superseded-by` are dead and listed at the end.
+
+## Final behaviours (35 entries)
+
+- **D6** [infra] replaces: - | final: what has no design yet is built from product rules then adapted.
+- **D12** [infra] replaces: - | final: production homeservers read; `app.twake.chat` carries `enable_invitations`, `matrix_profile_updates_allowed` (false on prod: do not offer profile edit), `support_contact`. (later D18, Flutter-profile memory)
+- **D19** [infra] replaces: - | final: last room list (names + counts, never messages) kept in localStorage per account, shown until first sync, forgotten at sign-out. One client in a shared worker for all tabs (no more "Use it here" lock screen): first tab signs in, next tabs open signed in without SSO; worker holds the Web Lock of the keys store; a tab of another build takes the store over and old tabs reload (D124); presence sync runs while one tab visible; each open tab notifies, notice tag makes system show it once; no shared worker (Chrome Android) -> page runs own client, one tab at a time; frame of Twake Space waits up to 5 s for the keys store; soft logout sends every tab through SSO. Only the reader's own scroll (wheel, touch, keys, scrollbar) asks for older messages. One tab per call (joining from a second replaces the first). — *modified by: D124, D373*
+- **D26** [infra] replaces: D24 (PostHog part) | final: events go to `POST {t.server}/_twake/v1/analytics/events` in batches (later side service, D404); no identify(); consent in account data `app.twake.chat.analytics_consent` `{granted, at}`; without endpoint nothing asked or sent. (bar also for Sentry DSN, D40) — *modified by: D40, D404*
+- **D64** [infra] replaces: D29 (completes) | final: With TWAKE_DRIVE_URL+SSO_URL+SSO_CLIENT_ID the app bar is the platform's `@linagora/twake-bar`: home, icon + "Chat" logo text, help (stack `help_link`), apps menu, account menu whose "Log out" signs out of Chat; rail keeps Chat account menu ("My profile", status). SDK status waiting/ready else public after 30 s. Without those or on failure, local app bar of D29 (logo, help and Twake apps disabled, account). No bar inside Twake Space. — *modified by: D511*
+- **D112** [infra] replaces: updates D90; updated by D388, D398, D178 | final: "Copy public link" beside "Invite followers" (empty broadcast channel) and beside "Search" in its info; public page address `/b/<slug>` (room with `#slug`) else `/b/<room id>` (see D388/D398 for current rules). Analytics `page_link_copied` for the three buttons. — *modified by: D115, D122, D388, D398*
+- **D113** [infra] replaces: completes D102 | final: Synapse module adds the suggestions listener to the invite list of every room creation (never direct, never encrypted). Server-side only; skipped from client behaviour. — *modified by: D140*
+- **D115** [infra] replaces: updates D112; updated by D388 | final: A room anyone may join (join rule public, not private/encrypted/space) has a public page and the two public-link buttons of D112 (`Room.isOpenToAll`). Later narrowed by D178/D388 (opt-in per room). — *modified by: D122, D388*
+- **D122** [infra] replaces: completes D112,D115; reversed by D388 | final: Reversed: visitors of a public page neither react nor report; page shows Matrix reactions. Skipped detail (ToM visitor counts gone). — *modified by: D388*
+- **D159** [infra] replaces: updated by D386, D550 | final: README architecture animation (gone since D550). skipped: D159, D113, D112 (public-page infra, kept as stubs), D115, D122 — *modified by: D386, D550*
+- **D277** [infra] replaces: D202 (fixes) | final: Children of a space are not refetched each sync (stale time 1 minute, refetched by their screen and after a join) to avoid Synapse 429 that made Edit toggles flip back. Client rule: do not poll /hierarchy per sync.
+- **D385** [infra] replaces: D210 (reverses closed connect-src) | final: CSP connect-src is `'self' https: wss:` (+ http origins of homeserver etc.): page reaches any https homeserver; tokens still go only to https services. Framing unchanged (`frame-ancestors 'none'` except `/embed/`).
+- **D398** [infra] replaces: D90,D112,D388 | final: Public pages are served by twake-chat-side-service at `PUBLIC_PAGES_URL`/b/<slug> or /b/<room id>; read as the service account, only if the room is in the directory and passes D178 gate and join rule `public`, checked on every read. `robots.txt` allows `/b/` and `/sitemap.xml`, disallows rest. "React in Twake Chat" opens `<chat url>/rooms/<room id>` (never matrix.to); a room opened that user isn't in offers "Try to join" (`RoomUnavailable`). — *modified by: D90, D112*
+- **D404** [infra] replaces: D26 (analytics) | final: After consent, the app captures `ui_clicked` (static data-testid, role, route pattern, input method), `page_left` with visible time (route pattern per screen: room, embedded room, Activity, Contacts, Settings sections, Create kinds, folders), `session_started`/`session_ended` with visible time on page hide. Never text/label/value/link of a control, ids, typed content. Sent to side service `POST /analytics/events`. — *modified by: D405*
+- **D405** [infra] replaces: D386,D404 | final: Well-known key `app.twake.chat.side_service.base_url` (falls back to `assistants.base_url`; `side_service` wins; unusable URL counts absent) names the side service for assistants and analytics; public page links still from `PUBLIC_PAGES_URL`.
+- **D418** [infra] replaces: - | final: Rule: every technical choice follows Matrix spec/named MSC; custom names under `app.twake.*`; unstable MSC read under both names. (process; client-visible only via D419)
+- **D531** [infra] replaces: D54,D518 | final: sync no longer refetches presence or link previews; presence staleTime 15 s; room list no longer written to localStorage (old copy removed at start and sign-out). |
+- **D534** [infra] replaces: - | final: menus/dialogs built at first opening only; heavy panels (call view, poll dialog, space landing, Create, PDF/image viewers, emoji panel) lazy-loaded, prefetched on idle; a room without call mounts no CallView; format toolbar always shown with composer. |
+- **D535** [infra] replaces: - | final: room-open timing and Web Vitals measured (analytics sample 1 in 10); room-list filter and quick switcher use deferred input; preconnect to homeserver and SSO. |
+- **D537** [infra] replaces: D518 | final: change events carry {kind, roomId}; a receipt/message in room B does not redraw room A; typing refreshes room list at most once a second; search index saves 100 ms batches; ToM common settings polled every 5 min, not in hidden tab. |
+- **D540** [infra] replaces: - | final: every e2e run also runs perf-tagged tests; tolerance 25 %, compared with median of last 5 runs. |
+- **D541** [infra] replaces: - | final: lint = oxlint then eslint. |
+- **D543** [infra] replaces: D388,D516 (completes) | final: a room with join rule public gets `m.room.server_acl` allowing only its own server; people of another server come on invitation in a non-public room; public page unchanged. | — *modified by: D544*
+- **D544** [infra] replaces: D543 (completes) | final: federation whitelist work (server/chart); no UI. | — *modified by: D555*
+- **D550** [infra] replaces: D159 | final: docs only. | — *modified by: D159*
+- **D551** [infra] replaces: D423 | final: e2e stack runs harness; assistant bot id prefix `@bot_twake_<user>`. |
+- **D555** [infra] replaces: D544 | final: federation with matrix.org wanted; server config only. |
+- **D559** [infra] replaces: D503 (updates), D511 | final: first sliding sync asks 30 rooms (not 100) plus the room of the URL (room_subscriptions), list widens by steps of 100. |
+- **D567** [infra] replaces: - | final: a lazy panel that fails to load shows a notice (`PanelLoadFailed`) with "Retry" (reloads page) in place of the panel; dialog panels stay dialogs with host "Close"; no auto reload. |
+- **D582** [infra] replaces: - | final: lint ratchets (complexity 10, 300 lines/file, knip). |
+- **D595** [infra] replaces: D124 (follows) | final: tab reads `/version.json` every 10 min, on focus/visible, back online, and on lazy chunk failure; dialog "New version available" with "Reload" or "Later"; "Later", Escape or outside click hide it for 30 min. |
+- **D604** [infra] replaces: - | final: release-note scripts. |
+- **D610** [infra] replaces: - | final: failed Drive pick reported to Sentry; user still reads "Try again". |
+- **D616** [infra] replaces: D411 (updates) | final: e2e nightly only. |
+- **D620** [infra] replaces: - | final: process rule only. |
+
+## Superseded
+
+- **D24** superseded by D26 (PostHog part) —  [infra] replaces: - | final: analytics consent asked once per browser (bar at bottom), changeable in settings; nothing sent without yes. superseded-by: D26 (PostHog part)

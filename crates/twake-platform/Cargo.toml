@@ -1,0 +1,26 @@
+[package]
+name = "twake-platform"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+# unsafe_code is "deny" here (ARCHITECTURE section 9): a crate cannot extend
+# `workspace = true` lints, so the workspace table is repeated with that one change.
+[lints.rust]
+unsafe_code = "deny"
+missing_docs = "warn"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+dbg_macro = "deny"
+todo = "deny"
+undocumented_unsafe_blocks = "deny"
+cognitive_complexity = "warn"
+too_many_lines = "warn"
+
+[dependencies]
+twake-app = { path = "../twake-app" }
+twake-domain = { path = "../twake-domain" }

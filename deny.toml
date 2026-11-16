@@ -1,0 +1,56 @@
+[graph]
+all-features = true
+
+[advisories]
+version = 2
+yanked = "deny"
+# Only informational "unmaintained" advisories are ignored, one by id, all via gpui-unofficial 1.28.1 (A028) or matrix-sdk.
+# A vulnerability is never ignored. Review every entry at each gpui bump (A018, A028): drop the ones `cargo deny` reports as not encountered.
+ignore = [
+  { id = "RUSTSEC-2026-0192", reason = "unmaintained, transitive only: ttf-parser 0.25.1 <- fontdb 0.23 <- usvg 0.46, and <- cosmic-text 0.19 (Linux wgpu build only) <- gpui-unofficial 1.28.1; reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2026-0206", reason = "unmaintained, transitive only: rustybuzz 0.20.1 <- usvg 0.46 <- gpui-unofficial 1.28.1 (SVG icons, macOS too); reviewed 2026-11-12 (A018)" },
+  { id = "RUSTSEC-2026-0370", reason = "unmaintained, transitive only: zvariant 5.15 <- zbus 5.19 <- accesskit_unix, ashpd <- gpui-linux (Linux only, not compiled on macOS); reviewed 2026-11-13 (A028)" },
+  { id = "RUSTSEC-2026-0371", reason = "unmaintained, transitive only: zbus_names 4.3 <- zbus 5.19 <- accesskit_unix, ashpd <- gpui-linux (Linux only, not compiled on macOS); reviewed 2026-11-13 (A028)" },
+  { id = "RUSTSEC-2026-0372", reason = "unmaintained, transitive only: zvariant_derive 5.15 <- zvariant <- zbus <- accesskit_unix, ashpd <- gpui-linux (Linux only, not compiled on macOS); reviewed 2026-11-13 (A028)" },
+  { id = "RUSTSEC-2026-0319", reason = "unmaintained, transitive only: anymap2 0.13.0 <- matrix-sdk 0.19.1 (pinned, A003); reviewed 2026-11-12 (spike S2)" },
+]
+
+[licenses]
+version = 2
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "Unicode-3.0",
+  "Unicode-DFS-2016",
+  "MPL-2.0",
+  "Zlib",
+  "CC0-1.0",
+  "BSL-1.0",
+]
+confidence-threshold = 0.9
+# webpki-root-certs ships the Mozilla CA list under CDLA-Permissive-2.0 (permissive data licence:
+# use, modify, share; keep the licence text). webpki-root-certs <- rustls-platform-verifier <- reqwest <- matrix-sdk 0.19.1 (A025).
+exceptions = [
+  { allow = ["CDLA-Permissive-2.0"], crate = "webpki-root-certs" },
+]
+
+[licenses.private]
+# Workspace crates are `publish = false`; the repository licence is MIT (LICENSE, A025).
+ignore = true
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+# `path` dependencies between workspace crates have no version.
+allow-wildcard-paths = true
+# P2 (one external system, one crate) is enforced by `cargo xtask check-deps`;
+# `wrappers` entries are added with the first crate that needs them.
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
